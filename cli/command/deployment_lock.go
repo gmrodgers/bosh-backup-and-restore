@@ -6,33 +6,24 @@ import (
 	"github.com/urfave/cli"
 )
 
-type DeploymentBackupCommand struct {
+type DeploymentLockCommand struct {
 }
 
-func NewDeploymentBackupCommand() DeploymentBackupCommand {
-	return DeploymentBackupCommand{}
+func NewDeploymentLockCommand() DeploymentLockCommand {
+	return DeploymentLockCommand{}
 }
 
-func (d DeploymentBackupCommand) Cli() cli.Command {
+func (d DeploymentLockCommand) Cli() cli.Command {
 	return cli.Command{
-		Name:    "backup",
-		Aliases: []string{"b"},
-		Usage:   "Backup a deployment",
+		Name:    "lock",
+		Aliases: []string{"l"},
+		Usage:   "Lock a deployment",
 		Action:  d.Action,
-		Flags: []cli.Flag{
-			cli.BoolFlag{
-				Name:  "with-manifest",
-				Usage: "Download the deployment manifest",
-			},
-			cli.StringFlag{
-				Name: "artifact-path",
-				Usage: "Specify an optional path to save the backup artifacts to",
-			},
-		},
+		Flags:   []cli.Flag{},
 	}
 }
 
-func (d DeploymentBackupCommand) Action(c *cli.Context) error {
+func (d DeploymentLockCommand) Action(c *cli.Context) error {
 	trapSigint(true)
 
 	backuper, err := factory.BuildDeploymentBackuper(c.Parent().String("target"),

@@ -25,7 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Backup", func() {
+var _ = Describe("Unlock", func() {
 	var director *mockhttp.Server
 	var backupWorkspace string
 	var session *gexec.Session
@@ -119,11 +119,7 @@ instance_groups:
 			"--target", director.URL,
 			"--deployment", deploymentName,
 			"--debug",
-			"backup"}
-
-		if downloadManifest {
-			params = append(params, "--with-manifest")
-		}
+			"unlock"}
 
 		if waitForBackupToFinish {
 			session = binary.Run(backupWorkspace, env, params...)
@@ -154,86 +150,6 @@ touch /tmp/backup-script-was-run
 printf "backupcontent1" > $BBR_ARTIFACT_DIRECTORY/backupdump1
 printf "backupcontent2" > $BBR_ARTIFACT_DIRECTORY/backupdump2
 `)
-			})
-
-			Context("and the bbr process receives SIGINT while backing up", func() {
-				BeforeEach(func() {
-					waitForBackupToFinish = false
-
-					MockDirectorWith(director,
-						mockbosh.Info().WithAuthTypeBasic(),
-						VmsForDeployment(deploymentName, singleInstanceResponse("redis-dedicated-node")),
-						DownloadManifest(deploymentName, manifest),
-						SetupSSH(deploymentName, "redis-dedicated-node", "fake-uuid", 0, instance1),
-						CleanupSSH(deploymentName, "redis-dedicated-node"))
-
-					By("creating a backup script that takes a while")
-					instance1.CreateScript("/var/vcap/jobs/redis/bin/bbr/backup", `#!/usr/bin/env sh
-
-						set -u
-
-						sleep 5
-
-						printf "backupcontent1" > $BBR_ARTIFACT_DIRECTORY/backupdump1
-					`)
-				})
-
-				Context("and the user decides to cancel the backup", func() {
-					BeforeEach(func() {
-						verifyMocks = false
-					})
-
-					It("terminates", func() {
-						Eventually(session, "30s").Should(gbytes.Say("Backing up"))
-						session.Interrupt()
-
-						By("printing a helpful message and waiting for user input", func() {
-							Consistently(session.Exited).ShouldNot(BeClosed(), "bbr exited without user confirmation")
-							Eventually(session).Should(gbytes.Say(`Stopping a backup can leave the system in bad state. Are you sure you want to cancel\? \[yes/no\]`))
-							Expect(string(session.Out.Contents())).To(HaveSuffix(fmt.Sprintf("[yes/no]\n")))
-						})
-
-						stdin.Write([]byte("yes\n"))
-
-						By("then exiting with a failure", func() {
-							Eventually(session, 10).Should(gexec.Exit(1))
-						})
-
-						By("outputting a warning about cleanup", func() {
-							Eventually(session).Should(gbytes.Say("It is recommended that you run `bbr backup-cleanup` to ensure that any temp files are cleaned up and all jobs are unlocked."))
-						})
-
-						By("not creating an artifact tar from the interrupted backup script", func() {
-							boshBackupFilePath := path.Join(backupDirectory(), "/redis-dedicated-node-0-redis.tar")
-							Expect(boshBackupFilePath).NotTo(BeAnExistingFile())
-						})
-					})
-				})
-
-				Context("and the user decides to continue backup", func() {
-					It("continues to run", func() {
-						session.Interrupt()
-
-						By("printing a helpful message and waiting for user input", func() {
-							Consistently(session.Exited).ShouldNot(BeClosed(), "bbr exited without user confirmation")
-							Eventually(session).Should(gbytes.Say(`Stopping a backup can leave the system in bad state. Are you sure you want to cancel\? \[yes/no\]`))
-							Expect(string(session.Out.Contents())).To(HaveSuffix(fmt.Sprintf("[yes/no]\n")))
-						})
-
-						stdin.Write([]byte("no\n"))
-
-						By("waiting for the backup to finish successfully", func() {
-							Eventually(session, 10).Should(gexec.Exit(0))
-						})
-
-						By("still completing the backup", func() {
-							archive := OpenTarArchive(artifactFile("redis-dedicated-node-0-redis.tar"))
-
-							Expect(archive.Files()).To(ConsistOf("backupdump1"))
-							Expect(archive.FileContents("backupdump1")).To(Equal("backupcontent1"))
-						})
-					})
-				})
 			})
 
 			Context("and we don't ask for the manifest to be downloaded", func() {
@@ -316,79 +232,6 @@ printf "backupcontent2" > $BBR_ARTIFACT_DIRECTORY/backupdump2
 					})
 				})
 
-				Context("and an addon with bbr scripts is installed on the instance", func() {
-					BeforeEach(func() {
-						instance1.CreateScript("/var/vcap/jobs/an_addon_job/bin/bbr/backup", `#!/usr/bin/env sh
-
-echo "hi"
-`)
-					})
-
-					It("takes a backup successfully", func() {
-						By("not failing", func() {
-							Expect(session.ExitCode()).To(BeZero(), string(session.Err.Contents()))
-						})
-
-						By("creating an artifact file", func() {
-							Expect(artifactFile("redis-dedicated-node-0-redis.tar")).To(BeARegularFile())
-						})
-					})
-				})
-
-				Context("and there is a metadata script which produces yaml containing the custom backup_name", func() {
-					var redisCustomArtifactFile string
-					var redisDefaultArtifactFile string
-
-					BeforeEach(func() {
-						instance1.CreateScript("/var/vcap/jobs/redis/bin/bbr/metadata", `#!/usr/bin/env sh
-	touch /tmp/metadata-script-was-run
-echo "---
-backup_name: custom_backup_named_redis
-"`)
-					})
-
-					JustBeforeEach(func() {
-						redisCustomArtifactFile = path.Join(backupDirectory(), "/custom_backup_named_redis.tar")
-						redisDefaultArtifactFile = path.Join(backupDirectory(), "/redis-dedicated-node-0-redis.tar")
-					})
-
-					It("creates a named artifact", func() {
-						By("runs the metadata scripts", func() {
-							Expect(instance1.FileExists("/tmp/metadata-script-was-run")).To(BeTrue())
-						})
-
-						By("running a the backup script", func() {
-							Expect(instance1.FileExists("/tmp/backup-script-was-run")).To(BeTrue())
-						})
-
-						By("creating a custom backup artifact", func() {
-							archive := OpenTarArchive(redisCustomArtifactFile)
-
-							Expect(archive.Files()).To(ConsistOf("backupdump1", "backupdump2"))
-							Expect(archive.FileContents("backupdump1")).To(Equal("backupcontent1"))
-							Expect(archive.FileContents("backupdump2")).To(Equal("backupcontent2"))
-						})
-
-						By("not creating an artifact with the default name", func() {
-							Expect(redisDefaultArtifactFile).NotTo(BeARegularFile())
-						})
-
-						By("recording the artifact as a custom artifact in the backup metadata", func() {
-							metadataContents := ParseMetadata(metadataFile())
-
-							currentTimezone, _ := time.Now().Zone()
-							Expect(metadataContents.BackupActivityMetadata.StartTime).To(MatchRegexp(`^(\d{4})\/(\d{2})\/(\d{2}) (\d{2}):(\d{2}):(\d{2}) ` + currentTimezone + "$"))
-							Expect(metadataContents.BackupActivityMetadata.FinishTime).To(MatchRegexp(`^(\d{4})\/(\d{2})\/(\d{2}) (\d{2}):(\d{2}):(\d{2}) ` + currentTimezone + "$"))
-
-							Expect(metadataContents.CustomArtifactsMetadata).To(HaveLen(1))
-							Expect(metadataContents.CustomArtifactsMetadata[0].Name).To(Equal("custom_backup_named_redis"))
-							Expect(metadataContents.CustomArtifactsMetadata[0].Checksums).To(HaveLen(2))
-							Expect(metadataContents.CustomArtifactsMetadata[0].Checksums["./backupdump1"]).To(Equal(ShaFor("backupcontent1")))
-							Expect(metadataContents.CustomArtifactsMetadata[0].Checksums["./backupdump2"]).To(Equal(ShaFor("backupcontent2")))
-						})
-					})
-				})
-
 				Context("and the pre-backup-lock script is present", func() {
 					BeforeEach(func() {
 						instance1.CreateScript("/var/vcap/jobs/redis/bin/bbr/pre-backup-lock", `#!/usr/bin/env sh
@@ -460,32 +303,6 @@ touch /tmp/post-backup-unlock-output
 					})
 				})
 
-				Context("when backup file has owner only permissions of different user", func() {
-					BeforeEach(func() {
-						instance1.CreateScript("/var/vcap/jobs/redis/bin/bbr/backup", `#!/usr/bin/env sh
-
-set -u
-
-dd if=/dev/urandom of=$BBR_ARTIFACT_DIRECTORY/backupdump1 bs=1KB count=1024
-dd if=/dev/urandom of=$BBR_ARTIFACT_DIRECTORY/backupdump2 bs=1KB count=1024
-
-mkdir $BBR_ARTIFACT_DIRECTORY/backupdump3
-dd if=/dev/urandom of=$BBR_ARTIFACT_DIRECTORY/backupdump3/dump bs=1KB count=1024
-
-chown vcap:vcap $BBR_ARTIFACT_DIRECTORY/backupdump3
-chmod 0700 $BBR_ARTIFACT_DIRECTORY/backupdump3`)
-					})
-					It("backup is still drained", func() {
-						By("exits zero", func() {
-							Expect(session.ExitCode()).To(BeZero())
-						})
-
-						By("prints the artifact size with the files from the other users", func() {
-							Eventually(session).Should(gbytes.Say("Copying backup -- 3.0M uncompressed -- from redis-dedicated-node/fake-uuid..."))
-						})
-					})
-				})
-
 				Context("when deployment has a post-backup-unlock script", func() {
 					BeforeEach(func() {
 						instance1.CreateScript("/var/vcap/jobs/redis/bin/bbr/post-backup-unlock", `#!/usr/bin/env sh
@@ -543,26 +360,6 @@ exit 1`)
 					It("successfully backs up the deployment", func() {
 						Expect(session.ExitCode()).To(BeZero())
 					})
-				})
-			})
-
-			Context("and we ask for the manifest to be downloaded", func() {
-				BeforeEach(func() {
-					downloadManifest = true
-
-					director.VerifyAndMock(AppendBuilders(
-						[]mockhttp.MockedResponseBuilder{mockbosh.Info().WithAuthTypeBasic()},
-						VmsForDeployment(deploymentName, singleInstanceResponse("redis-dedicated-node")),
-						DownloadManifest(deploymentName, manifest),
-						SetupSSH(deploymentName, "redis-dedicated-node", "fake-uuid", 0, instance1),
-						DownloadManifest(deploymentName, "this is a totally valid yaml"),
-						CleanupSSH(deploymentName, "redis-dedicated-node"),
-					)...)
-				})
-
-				It("downloads the manifest", func() {
-					Expect(path.Join(backupDirectory(), "manifest.yml")).To(BeARegularFile())
-					Expect(ioutil.ReadFile(path.Join(backupDirectory(), "manifest.yml"))).To(Equal([]byte("this is a totally valid yaml")))
 				})
 			})
 		})
@@ -1205,15 +1002,3 @@ backup_name: name_2
 
 	})
 })
-
-func assertOutput(session *gexec.Session, strings []string) {
-	for _, str := range strings {
-		Expect(string(session.Out.Contents())).To(ContainSubstring(str))
-	}
-}
-
-func assertErrorOutput(session *gexec.Session, strings []string) {
-	for _, str := range strings {
-		Expect(string(session.Err.Contents())).To(ContainSubstring(str))
-	}
-}

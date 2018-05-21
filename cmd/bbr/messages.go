@@ -4,7 +4,7 @@ const helpTextTemplate = `NAME:
    {{.Name}}{{if .Usage}} - {{.Usage}}{{end}}
 
 USAGE:
-   bbr command [arguments...] [subcommand]{{if .Version}}{{if not .HideVersion}}
+   {{.Name}} command [arguments...] [subcommand]{{if .Version}}{{if not .HideVersion}}
 
 VERSION:
    {{.Version}}{{end}}{{end}}{{if .Description}}
@@ -21,11 +21,8 @@ COMMANDS:{{range .VisibleCategories}}{{if .Name}}
    {{join .Names ", "}}{{"\t"}}{{.Usage}}{{end}}{{end}}{{end}}
 
 SUBCOMMANDS:
-   backup
-   backup-cleanup
-   restore
-   restore-cleanup
-   pre-backup-check{{if .Copyright}}
+   lock
+   unlock{{if .Copyright}}
 
 COPYRIGHT:
    {{.Copyright}}{{end}}

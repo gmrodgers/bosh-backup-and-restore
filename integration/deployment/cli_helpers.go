@@ -28,12 +28,9 @@ func ShowsTheDeploymentHelpText(helpText *helpText) {
 
 func ShowsTheMainHelpText(helpText *helpText) {
 	Expect(helpText.outputString()).To(ContainSubstring(`SUBCOMMANDS:
-   backup
-   backup-cleanup
-   restore
-   restore-cleanup
-   pre-backup-check`))
+   lock
+   unlock`))
 
 	Expect(helpText.outputString()).To(ContainSubstring(`USAGE:
-   bbr command [arguments...] [subcommand]`))
+   db-lock command [arguments...] [subcommand]`))
 }

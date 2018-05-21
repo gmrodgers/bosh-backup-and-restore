@@ -19,7 +19,7 @@ test-integration:
 	ginkgo -r -trace integration
 
 bin:
-	go build -o bbr github.com/cloudfoundry-incubator/bosh-backup-and-restore/cmd/bbr
+	go build -o db-lock github.com/cloudfoundry-incubator/bosh-backup-and-restore/cmd/bbr
 
 bin-linux:
 	GOOS=linux GOARCH=amd64 go build -o bbr github.com/cloudfoundry-incubator/bosh-backup-and-restore/cmd/bbr

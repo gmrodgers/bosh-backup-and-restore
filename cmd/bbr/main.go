@@ -17,35 +17,19 @@ func main() {
 	app := cli.NewApp()
 
 	app.Version = version
-	app.Name = "bbr"
-	app.Usage = "BOSH Backup and Restore"
+	app.Name = "db-lock"
+	app.Usage = "BOSH Deployment Lock for Database Upgrades"
 	app.HideHelp = true
 
 	app.Commands = []cli.Command{
 		{
 			Name:   "deployment",
-			Usage:  "Backup BOSH deployments",
+			Usage:  "Lock/Unlock BOSH deployments",
 			Flags:  availableDeploymentFlags(),
 			Before: validateDeploymentFlags,
 			Subcommands: []cli.Command{
-				command.NewDeploymentPreBackupCheckCommand().Cli(),
-				command.NewDeploymentBackupCommand().Cli(),
-				command.NewDeploymentRestoreCommand().Cli(),
-				command.NewDeploymentBackupCleanupCommand().Cli(),
-				command.NewDeploymentRestoreCleanupCommand().Cli(),
-			},
-		},
-		{
-			Name:   "director",
-			Usage:  "Backup BOSH director",
-			Flags:  availableDirectorFlags(),
-			Before: validateDirectorFlags,
-			Subcommands: []cli.Command{
-				command.NewDirectorPreBackupCheckCommand().Cli(),
-				command.NewDirectorBackupCommand().Cli(),
-				command.NewDirectorRestoreCommand().Cli(),
-				command.NewDirectorBackupCleanupCommand().Cli(),
-				command.NewDirectorRestoreCleanupCommand().Cli(),
+				command.NewDeploymentLockCommand().Cli(),
+				command.NewDeploymentUnlockCommand().Cli(),
 			},
 		},
 		{
@@ -77,10 +61,6 @@ func versionAction(c *cli.Context) error {
 
 func validateDeploymentFlags(c *cli.Context) error {
 	return flags.Validate([]string{"target", "username", "password", "deployment"}, c)
-}
-
-func validateDirectorFlags(c *cli.Context) error {
-	return flags.Validate([]string{"host", "username", "private-key-path"}, c)
 }
 
 func availableDeploymentFlags() []cli.Flag {
@@ -115,30 +95,6 @@ func availableDeploymentFlags() []cli.Flag {
 			Value:  "",
 			EnvVar: "CA_CERT",
 			Usage:  "Custom CA certificate",
-		},
-	}
-}
-
-func availableDirectorFlags() []cli.Flag {
-	return []cli.Flag{
-		cli.StringFlag{
-			Name:  "host",
-			Value: "",
-			Usage: "BOSH Director hostname, with an optional port. Port defaults to 22",
-		},
-		cli.StringFlag{
-			Name:  "username, u",
-			Value: "",
-			Usage: "BOSH Director SSH username",
-		},
-		cli.StringFlag{
-			Name:  "private-key-path, key",
-			Value: "",
-			Usage: "BOSH Director SSH private key",
-		},
-		cli.BoolFlag{
-			Name:  "debug",
-			Usage: "Enable debug logs",
 		},
 	}
 }

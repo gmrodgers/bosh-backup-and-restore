@@ -280,42 +280,8 @@ var _ = Describe("CLI Interface", func() {
 			})
 		}
 
-		Context("backup", func() {
-			AssertDeploymentCLIBehaviour("backup")
-		})
-
-		Context("restore", func() {
-			BeforeEach(func() {
-				Expect(os.MkdirAll(backupWorkspace+"/"+"my-new-deployment", 0777)).To(Succeed())
-				createFileWithContents(backupWorkspace+"/"+"my-new-deployment"+"/"+"metadata", []byte(`---
-instances: []`))
-			})
-
-			AssertDeploymentCLIBehaviour("restore", "--artifact-path", "my-new-deployment")
-
-			Context("when artifact-path is not specified", func() {
-				var session *gexec.Session
-
-				BeforeEach(func() {
-					session = binary.Run(backupWorkspace, []string{},
-						"deployment",
-						"--ca-cert", sslCertPath,
-						"--username", "admin",
-						"--password", "admin",
-						"--target", director.URL,
-						"--deployment", "my-new-deployment",
-						"restore")
-					Eventually(session).Should(gexec.Exit())
-				})
-
-				It("Exits with non zero", func() {
-					Expect(session.ExitCode()).NotTo(BeZero())
-				})
-
-				It("displays a failure message", func() {
-					Expect(session.Err.Contents()).To(ContainSubstring("--artifact-path flag is required"))
-				})
-			})
+		Context("lock", func() {
+			AssertDeploymentCLIBehaviour("lock")
 		})
 
 		Context("--help", func() {
