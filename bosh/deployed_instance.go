@@ -18,25 +18,17 @@ func NewBoshDeployedInstance(instanceGroupName,
 	instanceID string,
 	remoteRunner ssh.RemoteRunner,
 	deployment director.Deployment,
-	artifactDirectoryCreated bool,
 	logger Logger,
 	jobs orchestrator.Jobs,
 ) orchestrator.Instance {
 	return &BoshDeployedInstance{
 		Deployment:       deployment,
-		DeployedInstance: instance.NewDeployedInstance(instanceIndex, instanceGroupName, instanceID, artifactDirectoryCreated, remoteRunner, logger, jobs),
+		DeployedInstance: instance.NewDeployedInstance(instanceIndex, instanceGroupName, instanceID, remoteRunner, logger, jobs),
 	}
 }
 
 func (i *BoshDeployedInstance) Cleanup() error {
 	var errs []error
-
-	if i.ArtifactDirCreated() {
-		removeArtifactError := i.RemoveArtifactDir()
-		if removeArtifactError != nil {
-			errs = append(errs, errors.Wrap(removeArtifactError, "failed to remove backup artifact"))
-		}
-	}
 
 	cleanupSSHError := i.cleanupSSHConnections()
 	if cleanupSSHError != nil {
@@ -48,11 +40,6 @@ func (i *BoshDeployedInstance) Cleanup() error {
 
 func (i *BoshDeployedInstance) CleanupPrevious() error {
 	var errs []error
-
-	removeArtifactError := i.RemoveArtifactDir()
-	if removeArtifactError != nil {
-		errs = append(errs, errors.Wrap(removeArtifactError, "failed to remove backup artifact"))
-	}
 
 	cleanupSSHError := i.cleanupSSHConnections()
 	if cleanupSSHError != nil {

@@ -38,11 +38,11 @@ func (d DeploymentLockCommand) Action(c *cli.Context) error {
 	}
 
 	deployment := c.Parent().String("deployment")
-	backupErr := backuper.Backup(deployment, c.String("artifact-path"))
+	lockErr := locker.Lock(deployment)
 
-	if backupErr.ContainsUnlockOrCleanup() {
-		return processErrorWithFooter(backupErr, backupCleanupAdvisedNotice)
+	if lockErr.ContainsUnlockOrCleanup() {
+		return processErrorWithFooter(lockErr, backupCleanupAdvisedNotice)
 	} else {
-		return processError(backupErr)
+		return processError(lockErr)
 	}
 }

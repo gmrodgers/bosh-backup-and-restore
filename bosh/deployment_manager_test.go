@@ -23,7 +23,7 @@ var _ = Describe("DeploymentManager", func() {
 		logger = new(fakes.FakeLogger)
 	})
 	JustBeforeEach(func() {
-		deploymentManager = bosh.NewDeploymentManager(boshClient, logger, true)
+		deploymentManager = bosh.NewDeploymentManager(boshClient, logger)
 	})
 
 	Context("Find", func() {

@@ -38,7 +38,6 @@ var _ = Describe("DeployedInstance", func() {
 			instanceIndex,
 			instanceGroupName,
 			instanceID,
-			false,
 			remoteRunner,
 			boshLogger,
 			jobs)

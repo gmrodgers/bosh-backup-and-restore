@@ -56,6 +56,6 @@ func (dm DeploymentManager) Find(deploymentName string) (orchestrator.Deployment
 	}
 
 	return orchestrator.NewDeployment(dm.Logger, []orchestrator.Instance{
-		NewDeployedInstance("bosh", remoteRunner, dm.Logger, jobs, false),
+		NewDeployedInstance("bosh", remoteRunner, dm.Logger, jobs),
 	}), nil
 }

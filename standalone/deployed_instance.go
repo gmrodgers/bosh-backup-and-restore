@@ -10,8 +10,8 @@ type DeployedInstance struct {
 	*instance.DeployedInstance
 }
 
-func NewDeployedInstance(instanceGroupName string, remoteRunner ssh.RemoteRunner, logger instance.Logger, jobs orchestrator.Jobs, artifactDirCreated bool) DeployedInstance {
+func NewDeployedInstance(instanceGroupName string, remoteRunner ssh.RemoteRunner, logger instance.Logger, jobs orchestrator.Jobs) DeployedInstance {
 	return DeployedInstance{
-		DeployedInstance: instance.NewDeployedInstance("0", instanceGroupName, "0", artifactDirCreated, remoteRunner, logger, jobs),
+		DeployedInstance: instance.NewDeployedInstance("0", instanceGroupName, "0", remoteRunner, logger, jobs),
 	}
 }

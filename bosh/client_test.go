@@ -116,7 +116,6 @@ var _ = Describe("Director", func() {
 					"jobID",
 					remoteRunner,
 					boshDeployment,
-					false,
 					boshLogger,
 					expectedJobs,
 				)}))
@@ -260,7 +259,6 @@ var _ = Describe("Director", func() {
 						"id1",
 						remoteRunner,
 						boshDeployment,
-						false,
 						boshLogger,
 						instance0Jobs,
 					),
@@ -270,7 +268,6 @@ var _ = Describe("Director", func() {
 						"id2",
 						remoteRunner,
 						boshDeployment,
-						false,
 						boshLogger,
 						instance1Jobs,
 					),
@@ -407,7 +404,6 @@ var _ = Describe("Director", func() {
 						"id1",
 						remoteRunner,
 						boshDeployment,
-						false,
 						boshLogger,
 						[]orchestrator.Job{},
 					),
@@ -417,7 +413,6 @@ var _ = Describe("Director", func() {
 						"id3",
 						remoteRunner,
 						boshDeployment,
-						false,
 						boshLogger,
 						[]orchestrator.Job{
 							instance.NewJob(remoteRunner, "", boshLogger, "",
@@ -432,7 +427,6 @@ var _ = Describe("Director", func() {
 						"id4",
 						remoteRunner,
 						boshDeployment,
-						false,
 						boshLogger,
 						[]orchestrator.Job{
 							instance.NewJob(remoteRunner, "", boshLogger, "",

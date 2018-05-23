@@ -26,11 +26,10 @@ func (d DeploymentUnlockCommand) Cli() cli.Command {
 func (d DeploymentUnlockCommand) Action(c *cli.Context) error {
 	trapSigint(true)
 
-	backuper, err := factory.BuildDeploymentBackuper(c.Parent().String("target"),
+	unlocker, err := factory.BuildDeploymentUnlocker(c.Parent().String("target"),
 		c.Parent().String("username"),
 		c.Parent().String("password"),
 		c.Parent().String("ca-cert"),
-		c.Bool("with-manifest"),
 		c.GlobalBool("debug"),
 	)
 
@@ -39,11 +38,11 @@ func (d DeploymentUnlockCommand) Action(c *cli.Context) error {
 	}
 
 	deployment := c.Parent().String("deployment")
-	backupErr := backuper.Backup(deployment, c.String("artifact-path"))
+	unlockErr := unlocker.Unlock(deployment)
 
-	if backupErr.ContainsUnlockOrCleanup() {
-		return processErrorWithFooter(backupErr, backupCleanupAdvisedNotice)
+	if unlockErr.ContainsUnlockOrCleanup() {
+		return processErrorWithFooter(unlockErr, backupCleanupAdvisedNotice)
 	} else {
-		return processError(backupErr)
+		return processError(unlockErr)
 	}
 }
