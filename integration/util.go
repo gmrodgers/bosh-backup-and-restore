@@ -9,14 +9,12 @@ import (
 	"io/ioutil"
 
 	"archive/tar"
-	"crypto/sha256"
 	"io"
 	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
-	"gopkg.in/yaml.v2"
 )
 
 type Binary struct {
@@ -49,57 +47,8 @@ func (b Binary) Run(cwd string, env []string, params ...string) *gexec.Session {
 	return session
 }
 
-type instanceMetadata struct {
-	InstanceName  string                   `yaml:"name"`
-	InstanceIndex string                   `yaml:"index"`
-	Artifacts     []customArtifactMetadata `yaml:"artifacts"`
-}
-
-func (metadata instanceMetadata) FindArtifact(artifactName string) customArtifactMetadata {
-	for _, artifact := range metadata.Artifacts {
-		if artifact.Name == artifactName {
-			return artifact
-		}
-	}
-	Fail("No artifact with " + artifactName + " found")
-	return customArtifactMetadata{}
-}
-
-type customArtifactMetadata struct {
-	Name      string            `yaml:"name"`
-	Checksums map[string]string `yaml:"checksums"`
-}
-
-type backupActivityMetadata struct {
-	StartTime  string `yaml:"start_time"`
-	FinishTime string `yaml:"finish_time"`
-}
-
-type metadata struct {
-	InstancesMetadata       []instanceMetadata       `yaml:"instances"`
-	CustomArtifactsMetadata []customArtifactMetadata `yaml:"custom_artifacts,omitempty"`
-	BackupActivityMetadata  backupActivityMetadata   `yaml:"backup_activity"`
-}
-
-func ParseMetadata(filePath string) metadata {
-	metadataContents := metadata{}
-	contents, _ := ioutil.ReadFile(filePath)
-	yaml.Unmarshal(contents, &metadataContents)
-	return metadataContents
-}
-
-func ShaFor(contents string) string {
-	shasum := sha256.New()
-	shasum.Write([]byte(contents))
-	return fmt.Sprintf("%x", shasum.Sum(nil))
-}
-
 type TarArchive struct {
 	path string
-}
-
-func OpenTarArchive(path string) TarArchive {
-	return TarArchive{path: path}
 }
 
 func (t TarArchive) Files() []string {

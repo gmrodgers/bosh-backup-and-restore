@@ -1,18 +1,12 @@
 package system
 
 import (
-	"fmt"
 	"os"
 )
 
-var RedisDeployment = DeploymentWithName("redis")
-var RedisWithMetadataDeployment = DeploymentWithName("redis-with-metadata")
-var RedisWithMissingScriptDeployment = DeploymentWithName("redis-with-missing-script")
-var JumpboxDeployment = DeploymentWithName("jumpbox")
+var RedisDeployment = DeploymentWithNameAndFixture("redis-db-lock", "redis")
+var JumpboxDeployment = DeploymentWithNameAndFixture("jumpbox-db-lock", "jumpbox")
 var JumpboxInstance = JumpboxDeployment.Instance("jumpbox", "0")
-var RedisSlowBackupDeployment = DeploymentWithName("redis-with-slow-backup")
-var RedisWithLockingOrderDeployment = DeploymentWithName("redis-with-locking-order")
-var ManyBbrJobsDeployment = DeploymentWithName("many-bbr-jobs")
 
 func MustHaveEnv(keyname string) string {
 	val := os.Getenv(keyname)
@@ -24,10 +18,6 @@ func MustHaveEnv(keyname string) string {
 	return val
 }
 
-func BackupDirWithTimestamp(deploymentName string) string {
-	return fmt.Sprintf("%s_*T*Z", deploymentName)
-}
-
-func DeploymentWithName(name string) Deployment {
-	return NewDeployment(name+"-"+MustHaveEnv("TEST_ENV"), "../../fixtures/"+name+".yml")
+func DeploymentWithNameAndFixture(deploymentName, fixtureName string) Deployment {
+	return NewDeployment(deploymentName+"-"+MustHaveEnv("TEST_ENV"), "../../fixtures/"+fixtureName+".yml")
 }

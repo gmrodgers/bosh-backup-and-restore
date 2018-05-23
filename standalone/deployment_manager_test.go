@@ -20,7 +20,6 @@ import (
 var _ = Describe("DeploymentManager", func() {
 	var deploymentManager DeploymentManager
 	var deploymentName = "bosh"
-	var artifact *fakes.FakeBackup
 	var logger *fakes.FakeLogger
 	var hostName = "hostname"
 	var username = "username"
@@ -32,7 +31,6 @@ var _ = Describe("DeploymentManager", func() {
 	BeforeEach(func() {
 		privateKey = createTempFile("privateKey")
 		logger = new(fakes.FakeLogger)
-		artifact = new(fakes.FakeBackup)
 		remoteRunnerFactory = new(sshfakes.FakeRemoteRunnerFactory)
 		fakeJobFinder = new(instancefakes.FakeJobFinder)
 		remoteRunner = new(sshfakes.FakeRemoteRunner)
@@ -73,7 +71,7 @@ var _ = Describe("DeploymentManager", func() {
 
 			It("returns a deployment", func() {
 				Expect(actualDeployment).To(Equal(orchestrator.NewDeployment(logger, []orchestrator.Instance{
-					NewDeployedInstance("bosh", remoteRunner, logger, fakeJobs, false),
+					NewDeployedInstance("bosh", remoteRunner, logger, fakeJobs),
 				})))
 			})
 		})
@@ -134,117 +132,6 @@ var _ = Describe("DeploymentManager", func() {
 			})
 		})
 
-	})
-
-	Describe("SaveManifest", func() {
-		It("does nothing", func() {
-			err := deploymentManager.SaveManifest(deploymentName, artifact)
-			Expect(err).NotTo(HaveOccurred())
-		})
-	})
-
-})
-
-var _ = Describe("DeployedInstance", func() {
-	var logger *fakes.FakeLogger
-	var remoteRunner *sshfakes.FakeRemoteRunner
-	var inst DeployedInstance
-	var artifactDirCreated bool
-
-	BeforeEach(func() {
-		logger = new(fakes.FakeLogger)
-		remoteRunner = new(sshfakes.FakeRemoteRunner)
-	})
-
-	Describe("Cleanup", func() {
-		var err error
-
-		JustBeforeEach(func() {
-			inst = NewDeployedInstance("group", remoteRunner, logger, []orchestrator.Job{}, artifactDirCreated)
-			err = inst.Cleanup()
-		})
-
-		BeforeEach(func() {
-			artifactDirCreated = true
-		})
-
-		It("does not fail", func() {
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("removes the artifact directory", func() {
-			Expect(remoteRunner.RemoveDirectoryCallCount()).To(Equal(1))
-			Expect(remoteRunner.RemoveDirectoryArgsForCall(0)).To(Equal("/var/vcap/store/bbr-backup"))
-		})
-
-		Context("when the artifact directory was not created this time", func() {
-			BeforeEach(func() {
-				artifactDirCreated = false
-			})
-
-			It("does not remove the artifact directory", func() {
-				Expect(remoteRunner.RemoveDirectoryCallCount()).To(Equal(0))
-			})
-		})
-
-		Context("when cleanup fails", func() {
-			BeforeEach(func() {
-				remoteRunner.RemoveDirectoryReturns(fmt.Errorf("fool!"))
-			})
-
-			It("returns an error", func() {
-				Expect(err).To(SatisfyAll(
-					MatchError(ContainSubstring("Unable to clean up backup artifact")),
-					MatchError(ContainSubstring("fool!")),
-				))
-			})
-		})
-	})
-
-	Describe("CleanupPrevious", func() {
-		var err error
-
-		JustBeforeEach(func() {
-			inst = NewDeployedInstance("group", remoteRunner, logger, []orchestrator.Job{}, artifactDirCreated)
-			err = inst.CleanupPrevious()
-		})
-
-		BeforeEach(func() {
-			artifactDirCreated = true
-		})
-
-		It("does not fail", func() {
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("removes the artifact directory", func() {
-			Expect(remoteRunner.RemoveDirectoryCallCount()).To(Equal(1))
-			Expect(remoteRunner.RemoveDirectoryArgsForCall(0)).To(Equal("/var/vcap/store/bbr-backup"))
-		})
-
-		Context("when the artifact directory was not created this time", func() {
-			BeforeEach(func() {
-				artifactDirCreated = false
-			})
-
-			It("does remove the artifact directory", func() {
-				Expect(remoteRunner.RemoveDirectoryCallCount()).To(Equal(1))
-				Expect(remoteRunner.RemoveDirectoryArgsForCall(0)).To(Equal("/var/vcap/store/bbr-backup"))
-			})
-		})
-
-		Context("when cleanup fails", func() {
-			BeforeEach(func() {
-				remoteRunner.RemoveDirectoryReturns(fmt.Errorf("fool!"))
-			})
-
-			It("returns an error", func() {
-				Expect(err).To(SatisfyAll(
-					MatchError(ContainSubstring("Unable to clean up backup artifact")),
-					MatchError(ContainSubstring("fool!")),
-				))
-			})
-		})
 	})
 })
 

@@ -4,25 +4,18 @@ import (
 	"fmt"
 	"math/rand"
 
+	"github.com/cloudfoundry-incubator/bosh-backup-and-restore/testcluster"
 	"github.com/pivotal-cf-experimental/cf-webmock/mockbosh"
 	"github.com/pivotal-cf-experimental/cf-webmock/mockhttp"
-	"github.com/cloudfoundry-incubator/bosh-backup-and-restore/testcluster"
 )
 
-func MockDirectorWith(director *mockhttp.Server, info mockhttp.MockedResponseBuilder, vmsResponse []mockhttp.MockedResponseBuilder, manifestResponse []mockhttp.MockedResponseBuilder, sshResponse []mockhttp.MockedResponseBuilder, cleanupResponse []mockhttp.MockedResponseBuilder) {
+func MockDirectorWithoutCleanupWith(director *mockhttp.Server, info mockhttp.MockedResponseBuilder, vmsResponse []mockhttp.MockedResponseBuilder, manifestResponse []mockhttp.MockedResponseBuilder, sshResponse []mockhttp.MockedResponseBuilder) {
 	director.VerifyAndMock(AppendBuilders(
 		[]mockhttp.MockedResponseBuilder{info},
 		vmsResponse,
 		manifestResponse,
 		sshResponse,
-		cleanupResponse,
 	)...)
-}
-
-func InfoWithBasicAuth() []mockhttp.MockedResponseBuilder {
-	return []mockhttp.MockedResponseBuilder{
-		mockbosh.Info().WithAuthTypeBasic(),
-	}
 }
 
 func VmsForDeployment(deploymentName string, responseInstances []mockbosh.VMsOutput) []mockhttp.MockedResponseBuilder {
@@ -33,12 +26,6 @@ func VmsForDeployment(deploymentName string, responseInstances []mockbosh.VMsOut
 		mockbosh.Task(randomTaskID).RespondsWithTaskContainingState(mockbosh.TaskDone),
 		mockbosh.TaskEvent(randomTaskID).RespondsWithVMsOutput([]string{}),
 		mockbosh.TaskOutput(randomTaskID).RespondsWithVMsOutput(responseInstances),
-	}
-}
-
-func VmsForDeploymentFails(deploymentName string) []mockhttp.MockedResponseBuilder {
-	return []mockhttp.MockedResponseBuilder{
-		mockbosh.VMsForDeployment(deploymentName).Fails("director unreachable"),
 	}
 }
 
@@ -77,20 +64,6 @@ func SetupSSH(deploymentName, instanceGroup, instanceID string, instanceIndex in
 				instanceIndex,
 			),
 		),
-	}
-}
-
-func CleanupSSH(deploymentName, instanceGroup string) []mockhttp.MockedResponseBuilder {
-	randomTaskID := generateTaskId()
-	return []mockhttp.MockedResponseBuilder{
-		mockbosh.CleanupSSHSession(deploymentName).ForInstanceGroup(instanceGroup).RedirectsToTask(randomTaskID),
-		mockbosh.Task(randomTaskID).RespondsWithTaskContainingState(mockbosh.TaskDone),
-	}
-}
-
-func CleanupSSHFails(deploymentName, instanceGroup, errorMessage string) []mockhttp.MockedResponseBuilder {
-	return []mockhttp.MockedResponseBuilder{
-		mockbosh.CleanupSSHSession(deploymentName).ForInstanceGroup(instanceGroup).Fails(errorMessage),
 	}
 }
 

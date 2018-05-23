@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 
+	"path"
 	"sync"
 	"testing"
 )
@@ -23,14 +24,12 @@ var (
 	err         error
 )
 
-var fixturesPath = "../../fixtures/redis-backup/"
-
 var _ = BeforeSuite(func() {
 	SetDefaultEventuallyTimeout(15 * time.Minute)
 
 	var wg sync.WaitGroup
 
-	wg.Add(3)
+	wg.Add(2)
 
 	go func() {
 		defer GinkgoRecover()
@@ -38,34 +37,14 @@ var _ = BeforeSuite(func() {
 
 		By("deploying the Redis test release")
 		RedisDeployment.Deploy()
-
-		By("deploying the Redis with metadata")
-		RedisWithMetadataDeployment.Deploy()
 	}()
 
 	go func() {
 		defer GinkgoRecover()
 		defer wg.Done()
-
-		By("deploying the Redis with missing backup script")
-		RedisWithMissingScriptDeployment.Deploy()
-
-		By("deploying the slow backup Redis test release")
-		RedisSlowBackupDeployment.Deploy()
-	}()
-
-	go func() {
-		defer GinkgoRecover()
-		defer wg.Done()
-
-		By("deploying the Redis with locking order release")
-		RedisWithLockingOrderDeployment.Deploy()
 
 		By("deploying the jump box")
 		JumpboxDeployment.Deploy()
-
-		By("deploying the many-bbr-jobs deployment")
-		ManyBbrJobsDeployment.Deploy()
 	}()
 
 	wg.Wait()
@@ -85,7 +64,7 @@ var _ = BeforeSuite(func() {
 var _ = AfterSuite(func() {
 	var wg sync.WaitGroup
 
-	wg.Add(3)
+	wg.Add(2)
 
 	go func() {
 		defer GinkgoRecover()
@@ -93,34 +72,14 @@ var _ = AfterSuite(func() {
 
 		By("tearing down the redis release")
 		RedisDeployment.Delete()
-
-		By("tearing down the other redis release")
-		RedisWithMetadataDeployment.Delete()
 	}()
 
 	go func() {
 		defer GinkgoRecover()
 		defer wg.Done()
-
-		By("tearing down the other redis release")
-		RedisWithMissingScriptDeployment.Delete()
-
-		By("tearing down the slow backup Redis test release")
-		RedisSlowBackupDeployment.Delete()
-	}()
-
-	go func() {
-		defer GinkgoRecover()
-		defer wg.Done()
-
-		By("tearing down the Redis with locking order release")
-		RedisWithLockingOrderDeployment.Delete()
 
 		By("tearing down the jump box")
 		JumpboxDeployment.Delete()
-
-		By("tearing down the many-bbr-jobs deployment")
-		ManyBbrJobsDeployment.Delete()
 	}()
 
 	wg.Wait()

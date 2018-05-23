@@ -777,43 +777,4 @@ var _ = Describe("Director", func() {
 			})
 		})
 	})
-
-	Describe("GetManifest", func() {
-		var actualManifest string
-		var acutalError error
-		JustBeforeEach(func() {
-			actualManifest, acutalError = b.GetManifest(deploymentName)
-		})
-
-		Context("gets the manifest", func() {
-			BeforeEach(func() {
-				boshDirector.FindDeploymentReturns(boshDeployment, nil)
-				boshDeployment.ManifestReturns("a good ol manifest", nil)
-			})
-			It("from the deployment", func() {
-				Expect(actualManifest).To(Equal("a good ol manifest"))
-			})
-		})
-		Context("fails", func() {
-			Context("to find deployment", func() {
-				var findDeploymentError = "no deployment here"
-				BeforeEach(func() {
-					boshDirector.FindDeploymentReturns(nil, errors.New(findDeploymentError))
-				})
-				It("returns an error", func() {
-					Expect(acutalError).To(MatchError(ContainSubstring(findDeploymentError)))
-				})
-			})
-			Context("to download manifest", func() {
-				var downloadManifestError = errors.New("I refuse to download this manifest")
-				BeforeEach(func() {
-					boshDirector.FindDeploymentReturns(boshDeployment, nil)
-					boshDeployment.ManifestReturns("", downloadManifestError)
-				})
-				It("returns an error", func() {
-					Expect(acutalError).To(MatchError(downloadManifestError))
-				})
-			})
-		})
-	})
 })

@@ -4,7 +4,6 @@ import (
 	"github.com/cloudfoundry-incubator/bosh-backup-and-restore/instance"
 	"github.com/cloudfoundry-incubator/bosh-backup-and-restore/orchestrator"
 	"github.com/cloudfoundry-incubator/bosh-backup-and-restore/ssh"
-	"github.com/pkg/errors"
 )
 
 type DeployedInstance struct {
@@ -15,29 +14,4 @@ func NewDeployedInstance(instanceGroupName string, remoteRunner ssh.RemoteRunner
 	return DeployedInstance{
 		DeployedInstance: instance.NewDeployedInstance("0", instanceGroupName, "0", artifactDirCreated, remoteRunner, logger, jobs),
 	}
-}
-
-func (i DeployedInstance) Cleanup() error {
-	if !i.ArtifactDirCreated() {
-		i.Logger.Debug("bbr", "Backup directory was never created - skipping cleanup")
-		return nil
-	}
-
-	return i.cleanupArtifact()
-}
-
-func (i DeployedInstance) CleanupPrevious() error {
-	return i.cleanupArtifact()
-}
-
-func (i DeployedInstance) cleanupArtifact() error {
-	i.Logger.Info("bbr", "Cleaning up...")
-
-	err := i.RemoveArtifactDir()
-	if err != nil {
-		i.Logger.Error("bbr", "Backup artifact clean up failed")
-		return errors.Wrap(err, "Unable to clean up backup artifact")
-	}
-
-	return nil
 }

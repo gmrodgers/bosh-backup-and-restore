@@ -26,11 +26,10 @@ func (d DeploymentLockCommand) Cli() cli.Command {
 func (d DeploymentLockCommand) Action(c *cli.Context) error {
 	trapSigint(true)
 
-	backuper, err := factory.BuildDeploymentBackuper(c.Parent().String("target"),
+	locker, err := factory.BuildDeploymentLocker(c.Parent().String("target"),
 		c.Parent().String("username"),
 		c.Parent().String("password"),
 		c.Parent().String("ca-cert"),
-		c.Bool("with-manifest"),
 		c.GlobalBool("debug"),
 	)
 

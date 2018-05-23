@@ -6,11 +6,11 @@ import (
 	boshlog "github.com/cloudfoundry/bosh-utils/logger"
 )
 
-func BuildBoshDeploymentManager(targetUrl, username, password, caCert string, logger boshlog.Logger, downloadManifest bool) (orchestrator.DeploymentManager, error) {
+func BuildBoshDeploymentManager(targetUrl, username, password, caCert string, logger boshlog.Logger) (orchestrator.DeploymentManager, error) {
 	boshClient, err := bosh.BuildClient(targetUrl, username, password, caCert, logger)
 	if err != nil {
 		return nil, err
 	}
 
-	return bosh.NewDeploymentManager(boshClient, logger, downloadManifest), nil
+	return bosh.NewDeploymentManager(boshClient, logger), nil
 }

@@ -59,7 +59,3 @@ func (dm DeploymentManager) Find(deploymentName string) (orchestrator.Deployment
 		NewDeployedInstance("bosh", remoteRunner, dm.Logger, jobs, false),
 	}), nil
 }
-
-func (DeploymentManager) SaveManifest(deploymentName string, artifact orchestrator.Backup) error {
-	return nil
-}

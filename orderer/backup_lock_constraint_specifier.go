@@ -1,6 +1,8 @@
 package orderer
 
-import "github.com/cloudfoundry-incubator/bosh-backup-and-restore/orchestrator"
+import (
+	"github.com/cloudfoundry-incubator/bosh-backup-and-restore/orchestrator"
+)
 
 type BackupLockOrderConstraintSpecifier struct{}
 

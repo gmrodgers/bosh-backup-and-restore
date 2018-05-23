@@ -217,12 +217,6 @@ var _ = Describe("KahnLockOrderer", func() {
 			Expect(NewKahnBackupLockOrderer()).To(Equal(newKahnLockOrderer(NewBackupOrderConstraintSpecifier())))
 		})
 	})
-
-	Describe("NewKahnRestoreLockOrderer", func() {
-		It("creates a kahn restore lock order with the restore lock constraint", func() {
-			Expect(NewKahnRestoreLockOrderer()).To(Equal(newKahnLockOrderer(NewRestoreOrderConstraintSpecifier())))
-		})
-	})
 })
 
 func NewFakeOrderConstraintSpecifier() *FakeOrderConstraintSpecifier {

@@ -8,54 +8,36 @@ import (
 	"github.com/pkg/errors"
 )
 
+type Logger interface {
+	Debug(tag, msg string, args ...interface{})
+	Info(tag, msg string, args ...interface{})
+	Warn(tag, msg string, args ...interface{})
+	Error(tag, msg string, args ...interface{})
+}
+
 type DeployedInstance struct {
 	backupAndRestoreInstanceIndex string
 	instanceID                    string
 	instanceGroupName             string
 	artifactDirCreated            bool
-	Logger
-	jobs         orchestrator.Jobs
-	remoteRunner ssh.RemoteRunner
+	Logger                        Logger
+	jobs                          orchestrator.Jobs
+	remoteRunner                  ssh.RemoteRunner
 }
 
-func NewDeployedInstance(instanceIndex string, instanceGroupName string, instanceID string, artifactDirCreated bool, remoteRunner ssh.RemoteRunner, logger Logger, jobs orchestrator.Jobs) *DeployedInstance {
+func NewDeployedInstance(instanceIndex string, instanceGroupName string, instanceID string, remoteRunner ssh.RemoteRunner, logger Logger, jobs orchestrator.Jobs) *DeployedInstance {
 	return &DeployedInstance{
 		backupAndRestoreInstanceIndex: instanceIndex,
 		instanceGroupName:             instanceGroupName,
 		instanceID:                    instanceID,
-		artifactDirCreated:            artifactDirCreated,
 		Logger:                        logger,
 		jobs:                          jobs,
 		remoteRunner:                  remoteRunner,
 	}
 }
 
-func (i *DeployedInstance) ArtifactDirExists() (bool, error) {
-	return i.remoteRunner.DirectoryExists(orchestrator.ArtifactDirectory)
-}
-
-func (i *DeployedInstance) RemoveArtifactDir() error {
-	return i.remoteRunner.RemoveDirectory(orchestrator.ArtifactDirectory)
-}
-
 func (i *DeployedInstance) IsBackupable() bool {
 	return i.jobs.AnyAreBackupable()
-}
-
-func (i *DeployedInstance) ArtifactDirCreated() bool {
-	return i.artifactDirCreated
-}
-
-func (i *DeployedInstance) MarkArtifactDirCreated() {
-	i.artifactDirCreated = true
-}
-
-func (i *DeployedInstance) CustomBackupArtifactNames() []string {
-	return i.jobs.CustomBackupArtifactNames()
-}
-
-func (i *DeployedInstance) CustomRestoreArtifactNames() []string {
-	return i.jobs.CustomRestoreArtifactNames()
 }
 
 func (i *DeployedInstance) Jobs() []orchestrator.Job {
@@ -64,59 +46,17 @@ func (i *DeployedInstance) Jobs() []orchestrator.Job {
 
 func (i *DeployedInstance) Backup() error {
 	var backupErrors []error
-	for _, job := range i.jobs {
-		if err := job.Backup(); err != nil {
-			backupErrors = append(backupErrors, err)
-		}
-	}
+	//for _, job := range i.jobs {
+	//	if err := job.Backup(); err != nil {
+	//		backupErrors = append(backupErrors, err)
+	//	}
+	//}
 
 	if i.IsBackupable() {
-		i.artifactDirCreated = true
+		//i.artifactDirCreated = true
 	}
 
 	return orchestrator.ConvertErrors(backupErrors)
-}
-
-func artifactDirectoryVariables(artifactDirectory string) map[string]string {
-	return map[string]string{
-		"BBR_ARTIFACT_DIRECTORY": artifactDirectory + "/",
-		"ARTIFACT_DIRECTORY":     artifactDirectory + "/",
-	}
-}
-
-func (i *DeployedInstance) Restore() error {
-	var restoreErrors []error
-	for _, job := range i.jobs {
-		if err := job.Restore(); err != nil {
-			restoreErrors = append(restoreErrors, err)
-		}
-	}
-
-	return orchestrator.ConvertErrors(restoreErrors)
-}
-
-func (i *DeployedInstance) IsRestorable() bool {
-	return i.jobs.AnyAreRestorable()
-}
-
-func (i *DeployedInstance) ArtifactsToBackup() []orchestrator.BackupArtifact {
-	artifacts := []orchestrator.BackupArtifact{}
-
-	for _, job := range i.jobs.Backupable() {
-		artifacts = append(artifacts, NewBackupArtifact(job, i, i.remoteRunner, i.Logger))
-	}
-
-	return artifacts
-}
-
-func (i *DeployedInstance) ArtifactsToRestore() []orchestrator.BackupArtifact {
-	artifacts := []orchestrator.BackupArtifact{}
-
-	for _, job := range i.jobs.Restorable() {
-		artifacts = append(artifacts, NewRestoreArtifact(job, i, i.remoteRunner, i.Logger))
-	}
-
-	return artifacts
 }
 
 func (i *DeployedInstance) Name() string {

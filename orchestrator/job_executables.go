@@ -25,27 +25,3 @@ func NewJobPostBackupUnlockExecutable(job Job) executor.Executable {
 func (j JobPostBackupUnlockExecutor) Execute() error {
 	return j.PostBackupUnlock()
 }
-
-type JobPreRestoreLockExecutor struct {
-	Job
-}
-
-func NewJobPreRestoreLockExecutable(job Job) executor.Executable {
-	return JobPreRestoreLockExecutor{job}
-}
-
-func (j JobPreRestoreLockExecutor) Execute() error {
-	return j.PreRestoreLock()
-}
-
-type JobPostRestoreUnlockExecutor struct {
-	Job
-}
-
-func NewJobPostRestoreUnlockExecutable(job Job) executor.Executable {
-	return JobPostRestoreUnlockExecutor{job}
-}
-
-func (j JobPostRestoreUnlockExecutor) Execute() error {
-	return j.PostRestoreUnlock()
-}

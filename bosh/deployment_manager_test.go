@@ -16,8 +16,6 @@ var _ = Describe("DeploymentManager", func() {
 	var boshClient *fakes.FakeBoshClient
 	var logger *fakes.FakeLogger
 	var deploymentName = "brownie"
-	var fakeBackup *orchestrator_fakes.FakeBackup
-	var manifest string
 
 	var deploymentManager *bosh.DeploymentManager
 	BeforeEach(func() {
@@ -55,98 +53,6 @@ var _ = Describe("DeploymentManager", func() {
 
 			It("returns an error", func() {
 				Expect(findError).To(MatchError(ContainSubstring("failed to find instances")))
-			})
-		})
-	})
-
-	Describe("SaveManifest", func() {
-		var saveManifestError error
-
-		Context("when downloading the manifest", func() {
-			JustBeforeEach(func() {
-				saveManifestError = deploymentManager.SaveManifest(deploymentName, fakeBackup)
-			})
-
-			Context("successfully saves the manifest", func() {
-				BeforeEach(func() {
-					fakeBackup = new(orchestrator_fakes.FakeBackup)
-					manifest = "foo"
-					boshClient.GetManifestReturns(manifest, nil)
-				})
-
-				It("asks the bosh director for the manifest", func() {
-					Expect(boshClient.GetManifestCallCount()).To(Equal(1))
-					Expect(boshClient.GetManifestArgsForCall(0)).To(Equal(deploymentName))
-				})
-
-				It("saves the manifest to the backup", func() {
-					Expect(fakeBackup.SaveManifestCallCount()).To(Equal(1))
-					Expect(fakeBackup.SaveManifestArgsForCall(0)).To(Equal(manifest))
-				})
-				It("should succeed", func() {
-					Expect(saveManifestError).To(Succeed())
-				})
-			})
-
-			Context("fails to fetch the manifest", func() {
-				var manifestFetchError = fmt.Errorf("Boring error")
-				BeforeEach(func() {
-					fakeBackup = new(orchestrator_fakes.FakeBackup)
-					boshClient.GetManifestReturns("", manifestFetchError)
-				})
-
-				It("asks the bosh director for the manifest", func() {
-					Expect(boshClient.GetManifestCallCount()).To(Equal(1))
-					Expect(boshClient.GetManifestArgsForCall(0)).To(Equal(deploymentName))
-				})
-
-				It("does not save the manifest to the backup", func() {
-					Expect(fakeBackup.SaveManifestCallCount()).To(BeZero())
-				})
-
-				It("should fail", func() {
-					Expect(saveManifestError).To(MatchError(ContainSubstring("failed to get manifest")))
-				})
-			})
-
-			Context("fails to save the manifest", func() {
-				var manifestSaveError = fmt.Errorf("Boring")
-
-				BeforeEach(func() {
-					fakeBackup = new(orchestrator_fakes.FakeBackup)
-					boshClient.GetManifestReturns(manifest, nil)
-					fakeBackup.SaveManifestReturns(manifestSaveError)
-				})
-
-				It("asks the bosh director for the manifest", func() {
-					Expect(boshClient.GetManifestCallCount()).To(Equal(1))
-					Expect(boshClient.GetManifestArgsForCall(0)).To(Equal(deploymentName))
-				})
-
-				It("saves the manifest to the backup", func() {
-					Expect(fakeBackup.SaveManifestCallCount()).To(Equal(1))
-					Expect(fakeBackup.SaveManifestArgsForCall(0)).To(Equal(manifest))
-				})
-
-				It("should fail", func() {
-					Expect(saveManifestError).To(MatchError(manifestSaveError))
-				})
-			})
-		})
-
-		Context("when not downloading the manifest", func() {
-			BeforeEach(func() {
-				fakeBackup = new(orchestrator_fakes.FakeBackup)
-			})
-
-			JustBeforeEach(func() {
-				deploymentManager = bosh.NewDeploymentManager(boshClient, logger, false)
-				saveManifestError = deploymentManager.SaveManifest(deploymentName, fakeBackup)
-			})
-
-			It("doesn't download the manifest", func() {
-				Expect(boshClient.GetManifestCallCount()).To(BeZero())
-				Expect(fakeBackup.SaveManifestCallCount()).To(BeZero())
 			})
 		})
 	})

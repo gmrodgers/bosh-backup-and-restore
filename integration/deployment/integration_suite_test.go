@@ -37,9 +37,3 @@ func assertOutput(session *gexec.Session, strings []string) {
 		Expect(string(session.Out.Contents())).To(ContainSubstring(str))
 	}
 }
-
-func assertErrorOutput(session *gexec.Session, strings []string) {
-	for _, str := range strings {
-		Expect(string(session.Err.Contents())).To(ContainSubstring(str))
-	}
-}

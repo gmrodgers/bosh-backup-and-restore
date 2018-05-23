@@ -1,9 +1,5 @@
 package orchestrator
 
-import (
-	"io"
-)
-
 type InstanceIdentifer interface {
 	Name() string
 	Index() string
@@ -14,42 +10,19 @@ type InstanceIdentifer interface {
 type Instance interface {
 	InstanceIdentifer
 	IsBackupable() bool
-	ArtifactDirExists() (bool, error)
-	ArtifactDirCreated() bool
-	MarkArtifactDirCreated()
-	IsRestorable() bool
 	Backup() error
-	Restore() error
-	Cleanup() error
-	CleanupPrevious() error
-	ArtifactsToBackup() []BackupArtifact
-	ArtifactsToRestore() []BackupArtifact
-	CustomBackupArtifactNames() []string
-	CustomRestoreArtifactNames() []string
 	Jobs() []Job
 }
 
 //go:generate counterfeiter -o fakes/fake_job.go . Job
 type Job interface {
 	HasBackup() bool
-	HasRestore() bool
-	HasNamedBackupArtifact() bool
-	HasNamedRestoreArtifact() bool
-	BackupArtifactName() string
-	RestoreArtifactName() string
-	Backup() error
 	PreBackupLock() error
 	PostBackupUnlock() error
-	PreRestoreLock() error
-	Restore() error
-	PostRestoreUnlock() error
+	BackupShouldBeLockedBefore() []JobSpecifier
 	Name() string
 	Release() string
 	InstanceIdentifier() string
-	BackupArtifactDirectory() string
-	RestoreArtifactDirectory() string
-	BackupShouldBeLockedBefore() []JobSpecifier
-	RestoreShouldBeLockedBefore() []JobSpecifier
 }
 
 type JobSpecifier struct {
@@ -63,16 +36,6 @@ type ArtifactIdentifier interface {
 	InstanceID() string
 	Name() string
 	HasCustomName() bool
-}
-
-//go:generate counterfeiter -o fakes/fake_backup_artifact.go . BackupArtifact
-type BackupArtifact interface {
-	ArtifactIdentifier
-	Size() (string, error)
-	Checksum() (BackupChecksum, error)
-	StreamFromRemote(io.Writer) error
-	Delete() error
-	StreamToRemote(io.Reader) error
 }
 
 type instances []Instance
@@ -101,67 +64,18 @@ func (is instances) AllBackupable() instances {
 	return backupableInstances
 }
 
-func (is instances) CustomArtifactNames() []string {
-	var artifactNames []string
-
-	for _, instance := range is {
-		artifactNames = append(artifactNames, instance.CustomBackupArtifactNames()...)
-	}
-
-	return artifactNames
-}
-
-func (is instances) RestoreArtifactNames() []string {
-	var artifactNames []string
-
-	for _, instance := range is {
-		artifactNames = append(artifactNames, instance.CustomRestoreArtifactNames()...)
-	}
-
-	return artifactNames
-}
-
-func (is instances) AllRestoreable() instances {
-	var instances []Instance
-
-	for _, instance := range is {
-		if instance.IsRestorable() {
-			instances = append(instances, instance)
-		}
-	}
-	return instances
-}
 
 func (is instances) AllBackupableOrRestorable() instances {
 	var instances []Instance
 
 	for _, instance := range is {
-		if instance.IsBackupable() || instance.IsRestorable() {
+		if instance.IsBackupable() {
 			instances = append(instances, instance)
 		}
 	}
 	return instances
 }
 
-func (is instances) Cleanup() error {
-	var cleanupErrors []error
-	for _, instance := range is {
-		if err := instance.Cleanup(); err != nil {
-			cleanupErrors = append(cleanupErrors, err)
-		}
-	}
-	return ConvertErrors(cleanupErrors)
-}
-
-func (is instances) CleanupPrevious() error {
-	var cleanupPreviousErrors []error
-	for _, instance := range is {
-		if err := instance.CleanupPrevious(); err != nil {
-			cleanupPreviousErrors = append(cleanupPreviousErrors, err)
-		}
-	}
-	return ConvertErrors(cleanupPreviousErrors)
-}
 
 func (is instances) Backup() error {
 	for _, instance := range is {
@@ -173,12 +87,3 @@ func (is instances) Backup() error {
 	return nil
 }
 
-func (is instances) Restore() error {
-	for _, instance := range is {
-		err := instance.Restore()
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}

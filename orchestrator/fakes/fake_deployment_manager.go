@@ -21,18 +21,6 @@ type FakeDeploymentManager struct {
 		result1 orchestrator.Deployment
 		result2 error
 	}
-	SaveManifestStub        func(deploymentName string, artifact orchestrator.Backup) error
-	saveManifestMutex       sync.RWMutex
-	saveManifestArgsForCall []struct {
-		deploymentName string
-		artifact       orchestrator.Backup
-	}
-	saveManifestReturns struct {
-		result1 error
-	}
-	saveManifestReturnsOnCall map[int]struct {
-		result1 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -88,62 +76,11 @@ func (fake *FakeDeploymentManager) FindReturnsOnCall(i int, result1 orchestrator
 	}{result1, result2}
 }
 
-func (fake *FakeDeploymentManager) SaveManifest(deploymentName string, artifact orchestrator.Backup) error {
-	fake.saveManifestMutex.Lock()
-	ret, specificReturn := fake.saveManifestReturnsOnCall[len(fake.saveManifestArgsForCall)]
-	fake.saveManifestArgsForCall = append(fake.saveManifestArgsForCall, struct {
-		deploymentName string
-		artifact       orchestrator.Backup
-	}{deploymentName, artifact})
-	fake.recordInvocation("SaveManifest", []interface{}{deploymentName, artifact})
-	fake.saveManifestMutex.Unlock()
-	if fake.SaveManifestStub != nil {
-		return fake.SaveManifestStub(deploymentName, artifact)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.saveManifestReturns.result1
-}
-
-func (fake *FakeDeploymentManager) SaveManifestCallCount() int {
-	fake.saveManifestMutex.RLock()
-	defer fake.saveManifestMutex.RUnlock()
-	return len(fake.saveManifestArgsForCall)
-}
-
-func (fake *FakeDeploymentManager) SaveManifestArgsForCall(i int) (string, orchestrator.Backup) {
-	fake.saveManifestMutex.RLock()
-	defer fake.saveManifestMutex.RUnlock()
-	return fake.saveManifestArgsForCall[i].deploymentName, fake.saveManifestArgsForCall[i].artifact
-}
-
-func (fake *FakeDeploymentManager) SaveManifestReturns(result1 error) {
-	fake.SaveManifestStub = nil
-	fake.saveManifestReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeDeploymentManager) SaveManifestReturnsOnCall(i int, result1 error) {
-	fake.SaveManifestStub = nil
-	if fake.saveManifestReturnsOnCall == nil {
-		fake.saveManifestReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.saveManifestReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *FakeDeploymentManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.findMutex.RLock()
 	defer fake.findMutex.RUnlock()
-	fake.saveManifestMutex.RLock()
-	defer fake.saveManifestMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
