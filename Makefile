@@ -45,7 +45,7 @@ sys-test-local-deployment:
 	BOSH_CERT_PATH=~/workspace/bosh-backup-and-restore-meta/certs/lite-bosh.backup-and-restore.cf-app.com.crt \
 	BOSH_GATEWAY_USER=vcap \
 	BOSH_GATEWAY_KEY=~/workspace/bosh-backup-and-restore-meta/genesis-bosh/bosh.pem \
-	TEST_ENV=`echo $(DEV_ENV)` \
+	TEST_ENV=`echo $DEV_ENV` \
 	ginkgo -r -v -trace system/deployment
 
 sys-test-local-director:
