@@ -29,7 +29,7 @@ var _ = Describe("CLI Interface", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	Context("bbr deployment", func() {
+	Context("db-lock deployment", func() {
 		AssertDeploymentCLIBehaviour := func(cmd string, extraArgs ...string) {
 			Context("params", func() {
 				It("can invoke command with short names", func() {
@@ -310,7 +310,7 @@ var _ = Describe("CLI Interface", func() {
 
 	})
 
-	Context("bbr with no arguments", func() {
+	Context("db-lock with no arguments", func() {
 		var output helpText
 
 		BeforeEach(func() {

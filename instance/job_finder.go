@@ -41,7 +41,7 @@ func (j *JobFinderFromScripts) FindJobs(instanceIdentifier InstanceIdentifier, r
 	metadata := map[string]Metadata{}
 	scripts := NewBackupAndRestoreScripts(findOutput)
 	for _, script := range scripts {
-		j.Logger.Info("bbr", "%s/%s/%s", instanceIdentifier, script.JobName(), script.Name())
+		j.Logger.Info("db-lock", "%s/%s/%s", instanceIdentifier, script.JobName(), script.Name())
 		if script.isMetadata() {
 			jobMetadata, err := j.findMetadata(instanceIdentifier, script, remoteRunner)
 
@@ -60,16 +60,16 @@ func (j *JobFinderFromScripts) FindJobs(instanceIdentifier InstanceIdentifier, r
 
 func (j *JobFinderFromScripts) logMetadata(jobMetadata *Metadata, jobName string) {
 	for _, lockBefore := range jobMetadata.BackupShouldBeLockedBefore {
-		j.Logger.Info("bbr", "Detected order: %s should be locked before %s/%s during backup", jobName, lockBefore.Release, lockBefore.JobName)
+		j.Logger.Info("db-lock", "Detected order: %s should be locked before %s/%s during backup", jobName, lockBefore.Release, lockBefore.JobName)
 	}
 	for _, lockBefore := range jobMetadata.RestoreShouldBeLockedBefore {
-		j.Logger.Info("bbr", "Detected order: %s should be locked before %s/%s during restore", jobName, lockBefore.Release, lockBefore.JobName)
+		j.Logger.Info("db-lock", "Detected order: %s should be locked before %s/%s during restore", jobName, lockBefore.Release, lockBefore.JobName)
 	}
 }
 
 func (j *JobFinderFromScripts) findBBRScripts(instanceIdentifierForLogging InstanceIdentifier,
 	remoteRunner ssh.RemoteRunner) ([]string, error) {
-	j.Logger.Debug("bbr", "Attempting to find scripts on %s", instanceIdentifierForLogging)
+	j.Logger.Debug("db-lock", "Attempting to find scripts on %s", instanceIdentifierForLogging)
 
 	scripts, err := remoteRunner.FindFiles("/var/vcap/jobs/*/bin/bbr/*")
 	if err != nil {
@@ -121,7 +121,7 @@ func (j *JobFinderFromScripts) buildJobs(remoteRunner ssh.RemoteRunner,
 	for jobName, jobScripts := range groupedByJobName {
 		releaseName, err := releaseMapping.FindReleaseName(instanceIdentifier.InstanceGroupName, jobName)
 		if err != nil {
-			logger.Warn("bbr", "could not find release name for job %s", jobName)
+			logger.Warn("db-lock", "could not find release name for job %s", jobName)
 			releaseName = ""
 		}
 

@@ -79,7 +79,7 @@ func (i *DeployedInstance) handleErrs(jobName, label string, err error, exitCode
 	var foundErrors []error
 
 	if err != nil {
-		i.Logger.Error("bbr", fmt.Sprintf(
+		i.Logger.Error("db-lock", fmt.Sprintf(
 			"Error attempting to run %s script for job %s on %s/%s. Error: %s",
 			label,
 			jobName,
@@ -103,7 +103,7 @@ func (i *DeployedInstance) handleErrs(jobName, label string, err error, exitCode
 
 		foundErrors = append(foundErrors, errors.New(errorString))
 
-		i.Logger.Error("bbr", errorString)
+		i.Logger.Error("db-lock", errorString)
 	}
 
 	return orchestrator.ConvertErrors(foundErrors)

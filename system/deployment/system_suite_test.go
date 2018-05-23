@@ -49,7 +49,7 @@ var _ = BeforeSuite(func() {
 
 	wg.Wait()
 
-	By("building bbr")
+	By("building db-lock")
 	commandPath, err = gexec.BuildWithEnvironment("github.com/cloudfoundry-incubator/bosh-backup-and-restore/cmd/bbr", []string{"GOOS=linux", "GOARCH=amd64"})
 	Expect(err).NotTo(HaveOccurred())
 
@@ -57,7 +57,7 @@ var _ = BeforeSuite(func() {
 	Eventually(JumpboxInstance.RunCommand(
 		fmt.Sprintf("sudo mkdir %s && sudo chown vcap:vcap %s && sudo chmod 0777 %s", workspaceDir, workspaceDir, workspaceDir))).Should(gexec.Exit(0))
 
-	JumpboxInstance.Copy(commandPath, workspaceDir)
+	JumpboxInstance.Copy(commandPath, path.Join(workspaceDir, "db-lock"))
 	JumpboxInstance.Copy(MustHaveEnv("BOSH_CERT_PATH"), workspaceDir+"/bosh.crt")
 })
 

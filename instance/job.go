@@ -54,15 +54,15 @@ func (j Job) HasBackup() bool {
 
 func (j Job) PreBackupLock() error {
 	if j.preBackupScript != "" {
-		j.Logger.Debug("bbr", "> %s", j.preBackupScript)
-		j.Logger.Info("bbr", "Locking %s on %s for backup...", j.name, j.instanceIdentifier)
+		j.Logger.Debug("db-lock", "> %s", j.preBackupScript)
+		j.Logger.Info("db-lock", "Locking %s on %s for backup...", j.name, j.instanceIdentifier)
 
 		_, err := j.remoteRunner.RunScript(
 			string(j.preBackupScript),
 			fmt.Sprintf("pre-backup lock %s on %s", j.name, j.instanceIdentifier),
 		)
 		if err != nil {
-			j.Logger.Error("bbr", "Error locking %s on %s.", j.name, j.instanceIdentifier)
+			j.Logger.Error("db-lock", "Error locking %s on %s.", j.name, j.instanceIdentifier)
 
 			return errors.Wrap(err, fmt.Sprintf(
 				"Error attempting to run pre-backup-lock for job %s on %s",
@@ -71,7 +71,7 @@ func (j Job) PreBackupLock() error {
 			))
 		}
 
-		j.Logger.Info("bbr", "Finished locking %s on %s for backup.", j.name, j.instanceIdentifier)
+		j.Logger.Info("db-lock", "Finished locking %s on %s for backup.", j.name, j.instanceIdentifier)
 	}
 
 	return nil
@@ -79,15 +79,15 @@ func (j Job) PreBackupLock() error {
 
 func (j Job) PostBackupUnlock() error {
 	if j.postBackupScript != "" {
-		j.Logger.Debug("bbr", "> %s", j.postBackupScript)
-		j.Logger.Info("bbr", "Unlocking %s on %s...", j.name, j.instanceIdentifier)
+		j.Logger.Debug("db-lock", "> %s", j.postBackupScript)
+		j.Logger.Info("db-lock", "Unlocking %s on %s...", j.name, j.instanceIdentifier)
 
 		_, err := j.remoteRunner.RunScript(
 			string(j.postBackupScript),
 			fmt.Sprintf("post-backup unlock %s on %s", j.name, j.instanceIdentifier),
 		)
 		if err != nil {
-			j.Logger.Error("bbr", "Error unlocking %s on %s.", j.name, j.instanceIdentifier)
+			j.Logger.Error("db-lock", "Error unlocking %s on %s.", j.name, j.instanceIdentifier)
 
 			return errors.Wrap(err, fmt.Sprintf(
 				"Error attempting to run post-backup-unlock for job %s on %s",
@@ -106,7 +106,7 @@ func (j Job) handleErrs(jobName, label string, err error, exitCode int, stdout, 
 	var foundErrors []error
 
 	if err != nil {
-		j.Logger.Error("bbr", fmt.Sprintf(
+		j.Logger.Error("db-lock", fmt.Sprintf(
 			"Error attempting to run %s script for job %s on %s. Error: %s",
 			label,
 			jobName,
@@ -126,7 +126,7 @@ func (j Job) handleErrs(jobName, label string, err error, exitCode int, stdout, 
 
 		foundErrors = append(foundErrors, errors.New(errorString))
 
-		j.Logger.Error("bbr", errorString)
+		j.Logger.Error("db-lock", errorString)
 	}
 
 	return orchestrator.ConvertErrors(foundErrors)

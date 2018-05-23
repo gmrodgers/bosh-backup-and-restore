@@ -110,7 +110,7 @@ func (c Connection) runInSession(cmd string, stdout, stderr io.Writer, stdin io.
 	if err != nil {
 		return -1, errors.Wrap(err, "ssh.NewSession failed")
 	}
-	c.logger.Debug("bbr", "Trying to execute '%s' on remote", cmd)
+	c.logger.Debug("db-lock", "Trying to execute '%s' on remote", cmd)
 
 	stopKeepAliveLoop := c.startKeepAliveLoop(session)
 	defer close(stopKeepAliveLoop)
@@ -148,7 +148,7 @@ func (c Connection) startKeepAliveLoop(session *ssh.Session) chan struct{} {
 			case <-terminate:
 				return
 			default:
-				_, err := session.SendRequest("keepalive@bbr", true, nil)
+				_, err := session.SendRequest("keepalive@db-lock", true, nil)
 				if err != nil {
 					c.logger.Debug("ssh", "keepalive failed: %+v", err)
 				}

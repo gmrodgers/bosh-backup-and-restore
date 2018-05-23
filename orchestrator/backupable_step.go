@@ -12,7 +12,7 @@ func NewBackupableStep(lockOrderer LockOrderer, logger Logger) Step {
 }
 
 func (s *BackupableStep) Run(session *Session) error {
-	s.logger.Info("bbr", "Running pre-checks for backup of %s...\n", session.DeploymentName())
+	s.logger.Info("db-lock", "Running pre-checks for backup of %s...\n", session.DeploymentName())
 
 	deployment := session.CurrentDeployment()
 	if !deployment.IsBackupable() {

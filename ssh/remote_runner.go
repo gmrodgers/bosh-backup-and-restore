@@ -113,7 +113,7 @@ func (r SshRemoteRunner) FindFiles(pattern string) ([]string, error) {
 
 	if exitCode != 0 {
 		if strings.Contains(string(stderr), "No such file or directory") {
-			r.logger.Debug("bbr", "No files found for pattern '%s'", pattern)
+			r.logger.Debug("db-lock", "No files found for pattern '%s'", pattern)
 			return []string{}, nil
 		} else {
 			return nil, exitError(stderr, exitCode)
@@ -155,12 +155,12 @@ func (r SshRemoteRunner) logAndCheckErrors(stdout, stderr []byte, exitCode int, 
 
 func (r SshRemoteRunner) logOutput(stdout []byte, stderr []byte, label string) {
 	if label != "" {
-		r.logger.Debug("bbr", "[%s] stdout: %s", label, string(stdout))
-		r.logger.Debug("bbr", "[%s] stderr: %s", label, string(stderr))
+		r.logger.Debug("db-lock", "[%s] stdout: %s", label, string(stdout))
+		r.logger.Debug("db-lock", "[%s] stderr: %s", label, string(stderr))
 
 	} else {
-		r.logger.Debug("bbr", "stdout: %s", string(stdout))
-		r.logger.Debug("bbr", "stderr: %s", string(stderr))
+		r.logger.Debug("db-lock", "stdout: %s", string(stdout))
+		r.logger.Debug("db-lock", "stderr: %s", string(stderr))
 	}
 }
 

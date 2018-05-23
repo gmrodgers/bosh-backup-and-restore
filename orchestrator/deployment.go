@@ -44,7 +44,7 @@ func (bd *deployment) ValidateLockingDependencies(lockOrderer LockOrderer) error
 }
 
 func (bd *deployment) PreBackupLock(lockOrderer LockOrderer, executor executor.Executor) error {
-	bd.Logger.Info("bbr", "Running pre-backup-lock scripts...")
+	bd.Logger.Info("db-lock", "Running pre-backup-lock scripts...")
 
 	jobs := bd.instances.Jobs()
 
@@ -55,12 +55,12 @@ func (bd *deployment) PreBackupLock(lockOrderer LockOrderer, executor executor.E
 
 	preBackupLockErrors := executor.Run(newJobExecutables(orderedJobs, NewJobPreBackupLockExecutable))
 
-	bd.Logger.Info("bbr", "Finished running pre-backup-lock scripts.")
+	bd.Logger.Info("db-lock", "Finished running pre-backup-lock scripts.")
 	return ConvertErrors(preBackupLockErrors)
 }
 
 func (bd *deployment) PostBackupUnlock(lockOrderer LockOrderer, executor executor.Executor) error {
-	bd.Logger.Info("bbr", "Running post-backup-unlock scripts...")
+	bd.Logger.Info("db-lock", "Running post-backup-unlock scripts...")
 
 	jobs := bd.instances.Jobs()
 
@@ -71,7 +71,7 @@ func (bd *deployment) PostBackupUnlock(lockOrderer LockOrderer, executor executo
 	reversedJobs := Reverse(orderedJobs)
 
 	postBackupUnlockErrors := executor.Run(newJobExecutables(reversedJobs, NewJobPostBackupUnlockExecutable))
-	bd.Logger.Info("bbr", "Finished running post-backup-unlock scripts.")
+	bd.Logger.Info("db-lock", "Finished running post-backup-unlock scripts.")
 	return ConvertErrors(postBackupUnlockErrors)
 }
 

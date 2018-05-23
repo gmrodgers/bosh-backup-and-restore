@@ -58,7 +58,7 @@ func (c Client) FindInstances(deploymentName string) ([]orchestrator.Instance, e
 		return nil, errors.Wrap(err, "couldn't find deployment "+deploymentName)
 	}
 
-	c.Logger.Debug("bbr", "Finding VMs...")
+	c.Logger.Debug("db-lock", "Finding VMs...")
 	vms, err := deployment.VMInfos()
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't get vm infos")
@@ -67,7 +67,7 @@ func (c Client) FindInstances(deploymentName string) ([]orchestrator.Instance, e
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to generate ssh options")
 	}
-	c.Logger.Debug("bbr", "SSH user generated: %s", sshOpts.Username)
+	c.Logger.Debug("db-lock", "SSH user generated: %s", sshOpts.Username)
 
 	var instances []orchestrator.Instance
 	var slugs []director.AllOrInstanceGroupOrInstanceSlug
@@ -83,7 +83,7 @@ func (c Client) FindInstances(deploymentName string) ([]orchestrator.Instance, e
 	}
 
 	for _, instanceGroupName := range uniqueInstanceGroupNamesFromVMs(vms) {
-		c.Logger.Debug("bbr", "Setting up SSH for job %s", instanceGroupName)
+		c.Logger.Debug("db-lock", "Setting up SSH for job %s", instanceGroupName)
 
 		allVmInstances, err := director.NewAllOrInstanceGroupOrInstanceSlugFromString(instanceGroupName)
 		if err != nil {
@@ -101,7 +101,7 @@ func (c Client) FindInstances(deploymentName string) ([]orchestrator.Instance, e
 		for index, host := range sshRes.Hosts {
 			var err error
 
-			c.Logger.Debug("bbr", "Attempting to SSH onto %s, %s", host.Host, host.IndexOrID)
+			c.Logger.Debug("db-lock", "Attempting to SSH onto %s, %s", host.Host, host.IndexOrID)
 
 			hostPublicKey, _, _, _, err := gossh.ParseAuthorizedKey([]byte(host.HostPublicKey))
 			if err != nil {
@@ -129,14 +129,13 @@ func (c Client) FindInstances(deploymentName string) ([]orchestrator.Instance, e
 					host.IndexOrID,
 					remoteRunner,
 					deployment,
-					false,
 					c.Logger,
 					jobs,
 				),
 			)
 
 			if len(jobs) == 0 {
-				c.Logger.Debug("bbr", "no scripts found on instance %s/%s, skipping rest of the instances for %s", instanceGroupName, host.IndexOrID, instanceGroupName)
+				c.Logger.Debug("db-lock", "no scripts found on instance %s/%s, skipping rest of the instances for %s", instanceGroupName, host.IndexOrID, instanceGroupName)
 				break
 			}
 		}
