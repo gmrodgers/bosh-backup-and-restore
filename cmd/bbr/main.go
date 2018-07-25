@@ -13,6 +13,7 @@ var version string
 
 func main() {
 	cli.AppHelpTemplate = helpTextTemplate
+	cli.CommandHelpTemplate = commandTextTemplate
 
 	app := cli.NewApp()
 
