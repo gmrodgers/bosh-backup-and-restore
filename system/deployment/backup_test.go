@@ -3,6 +3,8 @@ package deployment
 import (
 	"fmt"
 
+	"os/exec"
+
 	. "github.com/cloudfoundry-incubator/bosh-backup-and-restore/system"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -138,8 +140,8 @@ var _ = Describe("backup", func() {
 		})
 	})
 
-	Context("when an instance has many backup scripts", func() {
-		It("does not fail draining the artifacts in parallel", func() {
+	Context("when an instance has many bbr scripts", func() {
+		It("does not fail running steps in parallel", func() {
 			session := JumpboxInstance.RunCommandAs("vcap", fmt.Sprintf(
 				`cd %s; BOSH_CLIENT_SECRET=%s ./bbr deployment --ca-cert bosh.crt --username %s --target %s --deployment %s backup`,
 				workspaceDir,
@@ -148,6 +150,32 @@ var _ = Describe("backup", func() {
 				MustHaveEnv("BOSH_ENVIRONMENT"),
 				ManyBbrJobsDeployment.Name,
 			))
+
+			Eventually(session).Should(gexec.Exit(0))
+		})
+
+		FIt("does not fail using BOSH_ALL_PROXY", func() {
+			boshAllProxy := fmt.Sprintf(
+				"ssh+socks5://%s@%s:22?private-key=%s",
+				MustHaveEnv("BOSH_GW_USER"),
+				MustHaveEnv("BOSH_GW_HOST"),
+				MustHaveEnv("BOSH_GW_PRIVATE_KEY"),
+			)
+
+			cmd := exec.Command(
+				commandPath,
+				"deployment",
+				"--ca-cert", MustHaveEnv("BOSH_CA_CERT"),
+				"--username", MustHaveEnv("BOSH_CLIENT"),
+				"--password", MustHaveEnv("BOSH_CLIENT_SECRET"),
+				"--target", MustHaveEnv("BOSH_ENVIRONMENT"),
+				"--deployment", ManyBbrJobsDeployment.Name,
+				"backup",
+			)
+			cmd.Env = append(cmd.Env, fmt.Sprintf("BOSH_ALL_PROXY=%s", boshAllProxy))
+
+			session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(session).Should(gexec.Exit(0))
 		})
