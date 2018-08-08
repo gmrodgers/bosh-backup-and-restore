@@ -1,7 +1,6 @@
 package deployment
 
 import (
-	"fmt"
 	"time"
 
 	. "github.com/cloudfoundry-incubator/bosh-backup-and-restore/system"
@@ -9,7 +8,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 
-	"sync"
 	"testing"
 )
 
@@ -29,107 +27,107 @@ var fixturesPath = "../../fixtures/redis-backup/"
 var _ = BeforeSuite(func() {
 	SetDefaultEventuallyTimeout(15 * time.Minute)
 
-	var wg sync.WaitGroup
+	//var wg sync.WaitGroup
 
-	wg.Add(3)
+	//wg.Add(3)
 
-	go func() {
-		defer GinkgoRecover()
-		defer wg.Done()
+	//go func() {
+	//	defer GinkgoRecover()
+	//	defer wg.Done()
+	//
+	//	By("deploying the Redis test release")
+	//	RedisDeployment.Deploy()
+	//
+	//	By("deploying the Redis with metadata")
+	//	RedisWithMetadataDeployment.Deploy()
+	//}()
+	//
+	//go func() {
+	//	defer GinkgoRecover()
+	//	defer wg.Done()
+	//
+	//	By("deploying the Redis with missing backup script")
+	//	RedisWithMissingScriptDeployment.Deploy()
+	//
+	//	By("deploying the slow backup Redis test release")
+	//	RedisSlowBackupDeployment.Deploy()
+	//}()
 
-		By("deploying the Redis test release")
-		RedisDeployment.Deploy()
+	//go func() {
+	//	defer GinkgoRecover()
+	//	defer wg.Done()
+	//
+	//By("deploying the Redis with locking order release")
+	//RedisWithLockingOrderDeployment.Deploy()
+	//
+	//By("deploying the jump box")
+	//JumpboxDeployment.Deploy()
 
-		By("deploying the Redis with metadata")
-		RedisWithMetadataDeployment.Deploy()
-	}()
+	By("deploying the many-bbr-jobs deployment")
+	ManyBbrJobsDeployment.Deploy()
+	//}()
 
-	go func() {
-		defer GinkgoRecover()
-		defer wg.Done()
-
-		By("deploying the Redis with missing backup script")
-		RedisWithMissingScriptDeployment.Deploy()
-
-		By("deploying the slow backup Redis test release")
-		RedisSlowBackupDeployment.Deploy()
-	}()
-
-	go func() {
-		defer GinkgoRecover()
-		defer wg.Done()
-
-		By("deploying the Redis with locking order release")
-		RedisWithLockingOrderDeployment.Deploy()
-
-		By("deploying the jump box")
-		JumpboxDeployment.Deploy()
-
-		By("deploying the many-bbr-jobs deployment")
-		ManyBbrJobsDeployment.Deploy()
-	}()
-
-	wg.Wait()
+	//wg.Wait()
 
 	By("building bbr")
-	commandPath, err = gexec.BuildWithEnvironment("github.com/cloudfoundry-incubator/bosh-backup-and-restore/cmd/bbr", []string{"GOOS=linux", "GOARCH=amd64"})
+	commandPath, err = gexec.Build("github.com/cloudfoundry-incubator/bosh-backup-and-restore/cmd/bbr")
 	Expect(err).NotTo(HaveOccurred())
-
-	By("setting up the jump box")
-	Eventually(JumpboxInstance.RunCommand(
-		fmt.Sprintf("sudo mkdir %s && sudo chown vcap:vcap %s && sudo chmod 0777 %s", workspaceDir, workspaceDir, workspaceDir))).Should(gexec.Exit(0))
-
-	By("writing $BOSH_CA_CERT to a temp file")
-	boshCaCertPath, err = WriteEnvVarToTempFile("BOSH_CA_CERT")
-	Expect(err).NotTo(HaveOccurred())
-
-	By("copying bbr and bosh.crt to the jumpbox")
-	JumpboxInstance.Copy(commandPath, workspaceDir)
-	JumpboxInstance.Copy(boshCaCertPath, workspaceDir+"/bosh.crt")
+	//
+	//By("setting up the jump box")
+	//Eventually(JumpboxInstance.RunCommand(
+	//	fmt.Sprintf("sudo mkdir %s && sudo chown vcap:vcap %s && sudo chmod 0777 %s", workspaceDir, workspaceDir, workspaceDir))).Should(gexec.Exit(0))
+	//
+	//By("writing $BOSH_CA_CERT to a temp file")
+	//boshCaCertPath, err = WriteEnvVarToTempFile("BOSH_CA_CERT")
+	//Expect(err).NotTo(HaveOccurred())
+	//
+	//By("copying bbr and bosh.crt to the jumpbox")
+	//JumpboxInstance.Copy(commandPath, workspaceDir)
+	//JumpboxInstance.Copy(boshCaCertPath, workspaceDir+"/bosh.crt")
 })
 
 var _ = AfterSuite(func() {
-	var wg sync.WaitGroup
+	//var wg sync.WaitGroup
+	//
+	//wg.Add(3)
+	//
+	//go func() {
+	//	defer GinkgoRecover()
+	//	defer wg.Done()
+	//
+	//	By("tearing down the redis release")
+	//	RedisDeployment.Delete()
+	//
+	//	By("tearing down the other redis release")
+	//	RedisWithMetadataDeployment.Delete()
+	//}()
+	//
+	//go func() {
+	//	defer GinkgoRecover()
+	//	defer wg.Done()
+	//
+	//	By("tearing down the other redis release")
+	//	RedisWithMissingScriptDeployment.Delete()
+	//
+	//	By("tearing down the slow backup Redis test release")
+	//	RedisSlowBackupDeployment.Delete()
+	//}()
+	//
+	//go func() {
+	//	defer GinkgoRecover()
+	//	defer wg.Done()
+	//
+	//	By("tearing down the Redis with locking order release")
+	//	RedisWithLockingOrderDeployment.Delete()
+	//
+	//	By("tearing down the jump box")
+	//	JumpboxDeployment.Delete()
 
-	wg.Add(3)
+	By("tearing down the many-bbr-jobs deployment")
+	ManyBbrJobsDeployment.Delete()
+	//}()
 
-	go func() {
-		defer GinkgoRecover()
-		defer wg.Done()
-
-		By("tearing down the redis release")
-		RedisDeployment.Delete()
-
-		By("tearing down the other redis release")
-		RedisWithMetadataDeployment.Delete()
-	}()
-
-	go func() {
-		defer GinkgoRecover()
-		defer wg.Done()
-
-		By("tearing down the other redis release")
-		RedisWithMissingScriptDeployment.Delete()
-
-		By("tearing down the slow backup Redis test release")
-		RedisSlowBackupDeployment.Delete()
-	}()
-
-	go func() {
-		defer GinkgoRecover()
-		defer wg.Done()
-
-		By("tearing down the Redis with locking order release")
-		RedisWithLockingOrderDeployment.Delete()
-
-		By("tearing down the jump box")
-		JumpboxDeployment.Delete()
-
-		By("tearing down the many-bbr-jobs deployment")
-		ManyBbrJobsDeployment.Delete()
-	}()
-
-	wg.Wait()
+	//wg.Wait()
 })
 
 func runOnInstances(instanceCollection map[string][]string, f func(string, string)) {
