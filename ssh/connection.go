@@ -136,14 +136,8 @@ func createDialFunc(serverAliveInterval time.Duration, logger Logger) boshhttp.D
 	defer dialFuncMutex.Unlock()
 
 	socksProxy := NewSocks5Proxy(proxy.NewHostKey(), serverAliveInterval, logger)
-	dialFunc = boshhttp.SOCKS5DialFuncFromEnvironment(dialFuncWithTimeout(30*time.Second), socksProxy)
+	dialFunc = boshhttp.SOCKS5DialFuncFromEnvironment((&net.Dialer{Timeout: 30 * time.Second}).Dial, socksProxy)
 	return dialFunc
-}
-
-func dialFuncWithTimeout(timeout time.Duration) boshhttp.DialFunc {
-	return func(network string, address string) (net.Conn, error) {
-		return net.DialTimeout(network, address, timeout)
-	}
 }
 
 func (c Connection) runInSession(cmd string, stdout, stderr io.Writer, stdin io.Reader) (int, error) {

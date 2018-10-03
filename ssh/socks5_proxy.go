@@ -34,24 +34,24 @@ func (s *Socks5Proxy) Dialer(username, key, url string) (proxy.DialFunc, error) 
 
 	signer, err := ssh.ParsePrivateKey([]byte(key))
 	if err != nil {
-		return nil, fmt.Errorf("parse private key: %s", err)
+		return nil, fmt.Errorf("socks5proxy parse private key: %s", err)
 	}
 
 	hostKey, err := s.hostKey.Get(username, key, url)
 	if err != nil {
-		return nil, fmt.Errorf("get host key: %s", err)
+		return nil, fmt.Errorf("socks5proxy get host key: %s", err)
 	}
 
 	clientConfig := proxy.NewSSHClientConfig(username, ssh.FixedHostKey(hostKey), ssh.PublicKeys(signer))
 
 	s.client, err = ssh.Dial("tcp", url, clientConfig)
 	if err != nil {
-		return nil, fmt.Errorf("ssh dial: %s", err)
+		return nil, fmt.Errorf("socks5proxy dial: %s", err)
 	}
 
 	err = s.startKeepAliveLoop()
 	if err != nil {
-		return nil, fmt.Errorf("ssh keepalive: %s", err)
+		return nil, fmt.Errorf("socks5proxy start keepalive: %s", err)
 	}
 
 	return s.client.Dial, nil
@@ -65,7 +65,7 @@ func (s *Socks5Proxy) Close() error {
 func (s *Socks5Proxy) startKeepAliveLoop() error {
 	session, err := s.client.NewSession()
 	if err != nil {
-		return fmt.Errorf("new session for keepalive: %s", err)
+		return err
 	}
 
 	s.terminate = make(chan struct{})
