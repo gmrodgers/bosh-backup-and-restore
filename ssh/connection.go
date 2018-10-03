@@ -125,10 +125,10 @@ func (c Connection) newClient() (*ssh.Client, error) {
 
 func createDialFunc(serverAliveInterval time.Duration, logger Logger) boshhttp.DialFunc {
 	dialFuncMutex.RLock()
-	haveDialer := dialFunc != nil
+	haveDialFunc := dialFunc != nil
 	dialFuncMutex.RUnlock()
 
-	if haveDialer {
+	if haveDialFunc {
 		return dialFunc
 	}
 
