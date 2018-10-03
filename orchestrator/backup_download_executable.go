@@ -2,6 +2,8 @@ package orchestrator
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/pkg/errors"
 )
 
@@ -77,6 +79,8 @@ func (e BackupDownloadExecutable) compareChecksums(localBackup Backup, remoteBac
 	if err != nil {
 		return nil, err
 	}
+
+	time.Sleep(16 * time.Minute)
 
 	remoteChecksum, err := remoteBackupArtifact.Checksum()
 	if err != nil {

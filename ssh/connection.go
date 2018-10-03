@@ -9,9 +9,7 @@ import (
 
 	"strings"
 
-	"log"
 	"net"
-	"os"
 
 	boshhttp "github.com/cloudfoundry/bosh-utils/httpclient"
 	"github.com/cloudfoundry/socks5-proxy"
@@ -57,7 +55,7 @@ func NewConnectionWithServerAliveInterval(hostName, userName, privateKey string,
 		},
 		logger:              logger,
 		serverAliveInterval: serverAliveInterval,
-		dialFunc:            createDialFunc(),
+		dialFunc:            createDialFunc(serverAliveInterval, logger),
 	}
 
 	return conn, nil
@@ -117,15 +115,15 @@ func (c Connection) newClient() (*ssh.Client, error) {
 		return nil, err
 	}
 
-	client, chans, reqs, err := ssh.NewClientConn(conn, c.host, c.sshConfig)
+	clientConn, chans, reqs, err := ssh.NewClientConn(conn, c.host, c.sshConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	return ssh.NewClient(client, chans, reqs), nil
+	return ssh.NewClient(clientConn, chans, reqs), nil
 }
 
-func createDialFunc() boshhttp.DialFunc {
+func createDialFunc(serverAliveInterval time.Duration, logger Logger) boshhttp.DialFunc {
 	dialFuncMutex.RLock()
 	haveDialer := dialFunc != nil
 	dialFuncMutex.RUnlock()
@@ -137,9 +135,15 @@ func createDialFunc() boshhttp.DialFunc {
 	dialFuncMutex.Lock()
 	defer dialFuncMutex.Unlock()
 
-	socksProxy := proxy.NewSocks5Proxy(proxy.NewHostKey(), log.New(os.Stdout, "sock5-proxy", log.LstdFlags))
-	dialFunc = boshhttp.SOCKS5DialFuncFromEnvironment(net.Dial, socksProxy)
+	socksProxy := NewSocks5Proxy(proxy.NewHostKey(), serverAliveInterval, logger)
+	dialFunc = boshhttp.SOCKS5DialFuncFromEnvironment(dialFuncWithTimeout(30*time.Second), socksProxy)
 	return dialFunc
+}
+
+func dialFuncWithTimeout(timeout time.Duration) boshhttp.DialFunc {
+	return func(network string, address string) (net.Conn, error) {
+		return net.DialTimeout(network, address, timeout)
+	}
 }
 
 func (c Connection) runInSession(cmd string, stdout, stderr io.Writer, stdin io.Reader) (int, error) {
