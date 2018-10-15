@@ -21,7 +21,7 @@ func (s *BackupableStep) Run(session *Session) error {
 
 	err := deployment.CheckArtifactDir()
 	if err != nil {
-		return err
+		return NewArtifactDirError(err)
 	}
 
 	if !deployment.HasUniqueCustomArtifactNames() {

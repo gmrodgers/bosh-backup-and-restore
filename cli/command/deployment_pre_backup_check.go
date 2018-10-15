@@ -45,6 +45,9 @@ func (d DeploymentPreBackupCheck) Action(c *cli.Context) error {
 	} else {
 		errs := backupableCheck(backupChecker, deployment)
 		if errs != nil {
+			if errs.ContainsArtifactDirError() {
+				return processErrorWithFooter(errs, backupCleanupAdvisedNotice)
+			}
 			return processError(errs)
 		}
 	}

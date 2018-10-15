@@ -146,7 +146,7 @@ backup_should_be_locked_before:
 					})
 				})
 
-				Context("but the backup artifact directory already exists", func() {
+				FContext("but the backup artifact directory already exists", func() {
 					BeforeEach(func() {
 						instance1.CreateDir("/var/vcap/store/bbr-backup")
 					})
@@ -158,6 +158,7 @@ backup_should_be_locked_before:
 					It("prints an error", func() {
 						Expect(session.Out).To(gbytes.Say("Deployment '" + deploymentName + "' cannot be backed up."))
 						Expect(session.Err).To(gbytes.Say("Directory /var/vcap/store/bbr-backup already exists on instance redis-dedicated-node/fake-uuid"))
+						Eventually(session.Err).Should(gbytes.Say("It is recommended that you run `bbr backup-cleanup` to ensure that any temp files are cleaned up and all jobs are unlocked."))
 						Expect(string(session.Err.Contents())).NotTo(ContainSubstring("main.go"))
 					})
 
