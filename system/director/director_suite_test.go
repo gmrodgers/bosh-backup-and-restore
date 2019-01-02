@@ -1,22 +1,30 @@
 package director
 
 import (
+	"io/ioutil"
+	"os"
+
 	. "github.com/cloudfoundry-incubator/bosh-backup-and-restore/system"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 
-	"fmt"
 	"testing"
 	"time"
 )
 
-var workspaceDir string
-var fixturesPath = "../../fixtures/director-backup/"
-var skipSSHFingerprintCheckOpts = "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+const (
+	fixturesPath                = "../../fixtures/director-backup/"
+	skipSSHFingerprintCheckOpts = "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+)
+
 var (
-	commandPath string
-	err         error
+	workspaceDir              string
+	commandPath               string
+	directorHost              string
+	directorSSHUsername       string
+	directorSSHPrivateKeyPath string
+	err                       error
 )
 
 func TestDirector(t *testing.T) {
@@ -27,28 +35,20 @@ func TestDirector(t *testing.T) {
 var _ = BeforeSuite(func() {
 	SetDefaultEventuallyTimeout(4 * time.Minute)
 
-	By("building bbr")
-	commandPath, err = gexec.BuildWithEnvironment("github.com/cloudfoundry-incubator/bosh-backup-and-restore/cmd/bbr", []string{"GOOS=linux", "GOARCH=amd64"})
+	MustHaveEnv("BOSH_ALL_PROXY")
+
+	directorHost = MustHaveEnv("DIRECTOR_HOST")
+	directorSSHUsername = MustHaveEnv("DIRECTOR_SSH_USERNAME")
+	directorSSHPrivateKeyPath = MustHaveEnv("DIRECTOR_SSH_KEY_PATH")
+
+	commandPath, err = gexec.Build("github.com/cloudfoundry-incubator/bosh-backup-and-restore/cmd/bbr")
 	Expect(err).NotTo(HaveOccurred())
 
-	workspaceDir = fmt.Sprintf("/var/vcap/store/pre_backup_check_workspace-%d", time.Now().Unix())
-
-	By("setting up the jump box")
-	Eventually(JumpboxInstance.RunCommand(
-		fmt.Sprintf("sudo mkdir %s && sudo chown vcap:vcap %s && sudo chmod 0777 %s", workspaceDir, workspaceDir, workspaceDir),
-	)).Should(gexec.Exit(0))
-
-	JumpboxInstance.Copy(commandPath, workspaceDir)
-	JumpboxInstance.Copy(MustHaveEnv("SSH_KEY"), workspaceDir+"/key.pem")
-
-	Eventually(JumpboxInstance.RunCommand(
-		fmt.Sprintf("sudo chown -R vcap:vcap %s", workspaceDir),
-	)).Should(gexec.Exit(0))
+	workspaceDir, err = ioutil.TempDir("", "bbr_system_test_director")
+	Expect(err).NotTo(HaveOccurred())
 })
 
 var _ = AfterSuite(func() {
-	By("cleaning up the jump box")
-	Eventually(JumpboxInstance.RunCommand(
-		fmt.Sprintf("sudo rm -rf %s", workspaceDir),
-	)).Should(gexec.Exit(0))
+	gexec.CleanupBuildArtifacts()
+	Expect(os.RemoveAll(workspaceDir)).To(Succeed())
 })

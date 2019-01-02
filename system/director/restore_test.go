@@ -10,14 +10,12 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var _ = Describe("Restores a deployment", func() {
+var _ = Describe("Restores a director", func() {
 	var restorePath = "/var/vcap/store/test-backup-and-restore"
 	var restoredArtifactPath = restorePath + "/backup"
 	var artifactName = "artifactToRestore"
 
 	AfterEach(func() {
-		directorIP := MustHaveEnv("HOST_TO_BACKUP")
-
 		By("cleaning up the jump box")
 		Eventually(JumpboxInstance.RunCommandAs("vcap",
 			fmt.Sprintf(
@@ -32,15 +30,13 @@ var _ = Describe("Restores a deployment", func() {
 			fmt.Sprintf(`cd %s; ssh %s vcap@%s -i key.pem "sudo rm -rf %s"`,
 				workspaceDir,
 				skipSSHFingerprintCheckOpts,
-				directorIP,
+				directorHost,
 				restorePath,
 			),
 		)).Should(gexec.Exit(0))
 	})
 
 	It("restores", func() {
-		directorIP := MustHaveEnv("HOST_TO_BACKUP")
-
 		By("setting up the jump box")
 		Eventually(JumpboxInstance.RunCommandAs("vcap",
 			fmt.Sprintf("sudo mkdir -p %s && sudo chmod -R 0777 %s",
@@ -54,7 +50,7 @@ var _ = Describe("Restores a deployment", func() {
 		restoreCommand := JumpboxInstance.RunCommandAs("vcap",
 			fmt.Sprintf(`cd %s; ./bbr director --username vcap --private-key-path ./key.pem --host %s restore --artifact-path %s`,
 				workspaceDir,
-				directorIP,
+				directorHost,
 				artifactName,
 			))
 		Eventually(restoreCommand).Should(gexec.Exit(0))
@@ -64,7 +60,7 @@ var _ = Describe("Restores a deployment", func() {
 			fmt.Sprintf(`cd %s; ssh %s vcap@%s -i key.pem "stat %s"`,
 				workspaceDir,
 				skipSSHFingerprintCheckOpts,
-				directorIP,
+				directorHost,
 				restoredArtifactPath,
 			),
 		)).Should(gexec.Exit(0))

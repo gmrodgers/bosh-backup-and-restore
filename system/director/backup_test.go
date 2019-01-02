@@ -16,8 +16,6 @@ var _ = Describe("Backup", func() {
 	var bbrCommand string
 	var artifactDir string
 
-	directorIP := MustHaveEnv("HOST_TO_BACKUP")
-
 	runsBBRBackupDirectorAndSucceeds := func() {
 		It("backs up the director", func() {
 			By("running the backup command")
@@ -25,9 +23,9 @@ var _ = Describe("Backup", func() {
 			Eventually(backupCommand).Should(gexec.Exit(0))
 
 			JumpboxInstance.AssertFilesExist([]string{
-				fmt.Sprintf("%s/%s/bosh-0-test-backup-and-restore.tar", artifactDir, BackupDirWithTimestamp(directorIP)),
-				fmt.Sprintf("%s/%s/bosh-0-remarkable-backup-and-restore.tar", artifactDir, BackupDirWithTimestamp(directorIP)),
-				fmt.Sprintf("%s/%s/bosh-0-amazing-backup-and-restore.tar", artifactDir, BackupDirWithTimestamp(directorIP)),
+				fmt.Sprintf("%s/%s/bosh-0-test-backup-and-restore.tar", artifactDir, BackupDirWithTimestamp(directorHost)),
+				fmt.Sprintf("%s/%s/bosh-0-remarkable-backup-and-restore.tar", artifactDir, BackupDirWithTimestamp(directorHost)),
+				fmt.Sprintf("%s/%s/bosh-0-amazing-backup-and-restore.tar", artifactDir, BackupDirWithTimestamp(directorHost)),
 			})
 		})
 	}
@@ -38,7 +36,7 @@ var _ = Describe("Backup", func() {
 			fmt.Sprintf(
 				`sudo rm -rf %s/%s`,
 				workspaceDir,
-				directorIP,
+				directorHost,
 			))).Should(gexec.Exit(0))
 	})
 
@@ -48,7 +46,7 @@ var _ = Describe("Backup", func() {
 			bbrCommand = fmt.Sprintf(
 				`cd %s; ./bbr director --username vcap --private-key-path ./key.pem --host %s backup`,
 				workspaceDir,
-				directorIP,
+				directorHost,
 			)
 		})
 
@@ -64,7 +62,7 @@ var _ = Describe("Backup", func() {
 			bbrCommand = fmt.Sprintf(
 				`cd %s; ./bbr director --username vcap --private-key-path ./key.pem --host %s backup --artifact-path %s`,
 				workspaceDir,
-				directorIP,
+				directorHost,
 				artifactDir,
 			)
 		})
@@ -79,7 +77,7 @@ var _ = Describe("Backup", func() {
 			bbrCommand = fmt.Sprintf(
 				`cd %s; ./bbr director --username vcap --private-key-path ./key.pem --host %s backup --artifact-path %s`,
 				workspaceDir,
-				directorIP,
+				directorHost,
 				artifactDir,
 			)
 		})

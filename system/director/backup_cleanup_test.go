@@ -11,8 +11,6 @@ import (
 )
 
 var _ = Describe("Director backup cleanup", func() {
-	var directorIP = MustHaveEnv("HOST_TO_BACKUP")
-
 	BeforeEach(func() {
 		By("starting a backup and aborting mid-way")
 		backupSession := JumpboxInstance.RunCommandAs("vcap",
@@ -23,7 +21,7 @@ var _ = Describe("Director backup cleanup", func() {
 				   --private-key-path ./key.pem \
 				   --host %s backup`,
 				workspaceDir,
-				directorIP),
+				directorHost),
 		)
 
 		Eventually(backupSession.Out).Should(gbytes.Say("Backing up test-backup-and-restore on bosh"))
@@ -40,7 +38,7 @@ var _ = Describe("Director backup cleanup", func() {
 					"sudo rm -rf /var/vcap/store/bbr-backup"`,
 				workspaceDir,
 				skipSSHFingerprintCheckOpts,
-				directorIP,
+				directorHost,
 			))).Should(gexec.Exit(0))
 
 		By("removing the backup")
@@ -48,7 +46,7 @@ var _ = Describe("Director backup cleanup", func() {
 			fmt.Sprintf(
 				`sudo rm -rf %s/%s*`,
 				workspaceDir,
-				directorIP,
+				directorHost,
 			))).Should(gexec.Exit(0))
 	})
 
@@ -64,11 +62,11 @@ var _ = Describe("Director backup cleanup", func() {
 						 --private-key-path ./key.pem \
 						 --host %s backup-cleanup`,
 						workspaceDir,
-						directorIP),
+						directorHost),
 				)
 
 				Eventually(cleanupCommand).Should(gexec.Exit(0))
-				Eventually(cleanupCommand).Should(gbytes.Say("'%s' cleaned up", directorIP))
+				Eventually(cleanupCommand).Should(gbytes.Say("'%s' cleaned up", directorHost))
 
 				Eventually(JumpboxInstance.RunCommandAs("vcap",
 					fmt.Sprintf(
@@ -78,7 +76,7 @@ var _ = Describe("Director backup cleanup", func() {
 						"ls -l /var/vcap/store/bbr-backup"`,
 						workspaceDir,
 						skipSSHFingerprintCheckOpts,
-						directorIP,
+						directorHost,
 					))).Should(gbytes.Say("ls: cannot access /var/vcap/store/bbr-backup: No such file or directory"))
 			})
 
@@ -92,7 +90,7 @@ var _ = Describe("Director backup cleanup", func() {
 						 --private-key-path ./key.pem \
 						 --host %s backup`,
 						workspaceDir,
-						directorIP),
+						directorHost),
 				)
 
 				Eventually(backupCommand).Should(gexec.Exit(0))
@@ -110,7 +108,7 @@ var _ = Describe("Director backup cleanup", func() {
 						 --private-key-path ./key.pem \
 						 --host %s backup`,
 					workspaceDir,
-					directorIP),
+					directorHost),
 			)
 
 			Eventually(backupCommand).Should(gexec.Exit(1))

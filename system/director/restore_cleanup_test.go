@@ -11,7 +11,6 @@ import (
 )
 
 var _ = Describe("Director restore cleanup", func() {
-	var directorIP = MustHaveEnv("HOST_TO_BACKUP")
 	var artifactName = "artifactToRestore"
 	var workspaceDir = "/var/vcap/store/restore_cleanup_workspace"
 
@@ -43,7 +42,7 @@ var _ = Describe("Director restore cleanup", func() {
 			--host %s restore \
 			--artifact-path %s`,
 					workspaceDir,
-					directorIP,
+					directorHost,
 					artifactName,
 				))
 			Eventually(restoreSession.Out).Should(gbytes.Say("Restoring test-backup-and-restore on bosh"))
@@ -61,7 +60,7 @@ var _ = Describe("Director restore cleanup", func() {
 						"sudo rm -rf /var/vcap/store/bbr-backup"`,
 					workspaceDir,
 					skipSSHFingerprintCheckOpts,
-					directorIP,
+					directorHost,
 				))).Should(gexec.Exit(0))
 		})
 
@@ -70,7 +69,7 @@ var _ = Describe("Director restore cleanup", func() {
 				fmt.Sprintf(
 					`sudo rm -rf %s/%s*`,
 					workspaceDir,
-					directorIP,
+					directorHost,
 				))).Should(gexec.Exit(0))
 		})
 
@@ -93,11 +92,11 @@ var _ = Describe("Director restore cleanup", func() {
 						 --private-key-path ./key.pem \
 						 --host %s restore-cleanup`,
 						workspaceDir,
-						directorIP),
+						directorHost),
 				)
 
 				Eventually(cleanupCommand).Should(gexec.Exit(0))
-				Eventually(cleanupCommand).Should(gbytes.Say("'%s' cleaned up", directorIP))
+				Eventually(cleanupCommand).Should(gbytes.Say("'%s' cleaned up", directorHost))
 
 				Eventually(JumpboxInstance.RunCommandAs("vcap",
 					fmt.Sprintf(
@@ -107,7 +106,7 @@ var _ = Describe("Director restore cleanup", func() {
 						"ls -l /var/vcap/store/bbr-backup"`,
 						workspaceDir,
 						skipSSHFingerprintCheckOpts,
-						directorIP,
+						directorHost,
 					))).Should(gbytes.Say("ls: cannot access /var/vcap/store/bbr-backup: No such file or directory"))
 			})
 
@@ -122,7 +121,7 @@ var _ = Describe("Director restore cleanup", func() {
 						 --host %s restore \
 						 --artifact-path %s`,
 						workspaceDir,
-						directorIP,
+						directorHost,
 						artifactName),
 				)
 
@@ -142,7 +141,7 @@ var _ = Describe("Director restore cleanup", func() {
 						 --host %s restore \
 						 --artifact-path %s`,
 					workspaceDir,
-					directorIP,
+					directorHost,
 					artifactName),
 			)
 
