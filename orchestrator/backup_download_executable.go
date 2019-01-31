@@ -1,7 +1,13 @@
 package orchestrator
 
 import (
+	"context"
 	"fmt"
+	"time"
+
+	"code.cloudfoundry.org/bytefmt"
+
+	"github.com/machinebox/progress"
 	"github.com/pkg/errors"
 )
 
@@ -50,13 +56,36 @@ func (e BackupDownloadExecutable) downloadBackupArtifact(localBackup Backup, rem
 		return err
 	}
 
+	progressWriter := progress.NewWriter(localBackupArtifactWriter)
+
 	size, err := remoteBackupArtifact.Size()
 	if err != nil {
 		return err
 	}
 
+	length, err := bytefmt.ToBytes(size)
+	if err != nil {
+		return err
+	}
+
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	go func() {
+		progressChan := progress.NewTicker(ctx, progressWriter, int64(length), 30*time.Second)
+
+		for p := range progressChan {
+			seconds := p.Remaining().Round(time.Second)
+			if seconds < 1 {
+				break
+			}
+
+			e.Logger.Info("bbr", "Copying backup -- %v remaining -- for job %s on %s/%s...", seconds, remoteBackupArtifact.Name(), remoteBackupArtifact.InstanceName(), remoteBackupArtifact.InstanceID())
+		}
+	}()
+
 	e.Logger.Info("bbr", "Copying backup -- %s uncompressed -- for job %s on %s/%s...", size, remoteBackupArtifact.Name(), remoteBackupArtifact.InstanceName(), remoteBackupArtifact.InstanceID())
-	err = remoteBackupArtifact.StreamFromRemote(localBackupArtifactWriter)
+	err = remoteBackupArtifact.StreamFromRemote(progressWriter)
+	cancel()
 	if err != nil {
 		return err
 	}

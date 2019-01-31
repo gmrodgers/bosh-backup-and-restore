@@ -19,6 +19,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:23ea7327e52e14b2b0eff80a8a4b9fa522922079e5afa4b969b8ca0ad182c3a1"
+  name = "code.cloudfoundry.org/bytefmt"
+  packages = ["."]
+  pruneopts = ""
+  revision = "2aa6f33b730c79971cfc3c742f279195b0abc627"
+
+[[projects]]
+  branch = "master"
   digest = "1:fc0802104acded1f48e4860a9f2db85b82b4a754fca9eae750ff4e8b8cdf2116"
   name = "code.cloudfoundry.org/clock"
   packages = ["."]
@@ -363,6 +371,14 @@
   packages = ["."]
   pruneopts = ""
   revision = "0b12d6b5"
+
+[[projects]]
+  digest = "1:e956fc79a95184918a6905b4579ccb77d4b970014896c540c1b13f1e2d7b7bfe"
+  name = "github.com/machinebox/progress"
+  packages = ["."]
+  pruneopts = ""
+  revision = "d29346a09ee172269963ae3309e6835d6581a7d0"
+  version = "v0.2.0"
 
 [[projects]]
   digest = "1:9ea83adf8e96d6304f394d40436f2eb44c1dc3250d223b74088cc253a6cd0a1c"
@@ -743,6 +759,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "code.cloudfoundry.org/bytefmt",
     "github.com/cloudfoundry/bosh-cli/cmd",
     "github.com/cloudfoundry/bosh-cli/director",
     "github.com/cloudfoundry/bosh-cli/director/directorfakes",
@@ -753,6 +770,7 @@
     "github.com/cloudfoundry/bosh-utils/uuid",
     "github.com/cloudfoundry/socks5-proxy",
     "github.com/cppforlife/go-patch/patch",
+    "github.com/machinebox/progress",
     "github.com/mgutz/ansi",
     "github.com/onsi/ginkgo",
     "github.com/onsi/ginkgo/config",
