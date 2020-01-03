@@ -28,8 +28,15 @@ var _ = Describe("backup", func() {
 				populateRedisFixtureOnInstances(instanceCollection)
 			})
 
+			session := JumpboxInstance.RunCommandAs("vcap", bbrCommand)
 			By("running the backup command", func() {
-				Eventually(JumpboxInstance.RunCommandAs("vcap", bbrCommand)).Should(gexec.Exit(0))
+				Eventually(session).Should(gexec.Exit(0))
+			})
+
+			By("printing the amount the artiact has been transferred", func() {
+				contents := string(session.Out.Contents())
+				Expect(contents).To(MatchRegexp(" INFO - Copying backup -- 0% of ([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])K complete -- for job redis-server on redis"))
+				Expect(contents).To(MatchRegexp(" INFO - Copying backup -- 100% of ([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])K complete -- for job redis-server on redis"))
 			})
 
 			By("running the pre-backup lock script", func() {

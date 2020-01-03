@@ -2,13 +2,27 @@ package orchestrator
 
 import (
 	"fmt"
+	"sync"
+	"time"
+
+	"code.cloudfoundry.org/bytefmt"
+	"github.com/cloudfoundry-incubator/bosh-backup-and-restore/counter"
 	"github.com/pkg/errors"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
+	"golang.org/x/text/number"
 )
+
+//go:generate counterfeiter -o fakes/fake_clock.go . Clock
+type Clock interface {
+	Sleep(time.Duration)
+}
 
 type BackupDownloadExecutable struct {
 	localBackup    Backup
 	remoteArtifact BackupArtifact
-	Logger
+	Logger         Logger
+	Clock          Clock
 }
 
 func NewBackupDownloadExecutable(localBackup Backup, remoteArtifact BackupArtifact, logger Logger) BackupDownloadExecutable {
@@ -16,6 +30,7 @@ func NewBackupDownloadExecutable(localBackup Backup, remoteArtifact BackupArtifa
 		localBackup:    localBackup,
 		remoteArtifact: remoteArtifact,
 		Logger:         logger,
+		Clock:          clock{},
 	}
 }
 
@@ -55,8 +70,30 @@ func (e BackupDownloadExecutable) downloadBackupArtifact(localBackup Backup, rem
 		return err
 	}
 
-	e.Logger.Info("bbr", "Copying backup -- %s uncompressed -- for job %s on %s/%s...", size, remoteBackupArtifact.Name(), remoteBackupArtifact.InstanceName(), remoteBackupArtifact.InstanceID())
-	err = remoteBackupArtifact.StreamFromRemote(localBackupArtifactWriter)
+	writerCounter := counter.NewCountWriter(localBackupArtifactWriter)
+	e.logAmountTransfered(writerCounter, size, remoteBackupArtifact.Name(), remoteBackupArtifact.InstanceName(), remoteBackupArtifact.InstanceID())
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	cancelLogging := make(chan struct{})
+	go func() {
+		e.Clock.Sleep(time.Second * 5)
+		for {
+			select {
+			case <-cancelLogging:
+				wg.Done()
+				return
+			default:
+				e.logAmountTransfered(writerCounter, size, remoteBackupArtifact.Name(), remoteBackupArtifact.InstanceName(), remoteBackupArtifact.InstanceID())
+				e.Clock.Sleep(time.Second * 5)
+			}
+		}
+	}()
+
+	err = remoteBackupArtifact.StreamFromRemote(writerCounter)
+	close(cancelLogging)
+	wg.Wait()
 	if err != nil {
 		return err
 	}
@@ -66,7 +103,7 @@ func (e BackupDownloadExecutable) downloadBackupArtifact(localBackup Backup, rem
 		return err
 	}
 
-	e.Logger.Info("bbr", "Finished copying backup -- for job %s on %s/%s...", remoteBackupArtifact.Name(), remoteBackupArtifact.InstanceName(), remoteBackupArtifact.InstanceID())
+	e.logAmountTransfered(writerCounter, size, remoteBackupArtifact.Name(), remoteBackupArtifact.InstanceName(), remoteBackupArtifact.InstanceID())
 	return nil
 }
 
@@ -98,4 +135,15 @@ func (e BackupDownloadExecutable) compareChecksums(localBackup Backup, remoteBac
 	}
 
 	return localChecksum, nil
+}
+
+func (e BackupDownloadExecutable) logAmountTransfered(writerCounter *counter.CountWriter, size, backupName, instanceName, instanceID string) {
+	byteSize, _ := bytefmt.ToBytes(size)
+	decimalPercentageComplete := float64(writerCounter.Count()) / float64(byteSize)
+	percentageComplete := number.Percent(decimalPercentageComplete, number.MaxFractionDigits(0))
+
+	printer := message.NewPrinter(language.English)
+	p := printer.Sprintf("%v", percentageComplete)
+
+	e.Logger.Info("bbr", "Copying backup -- %s of %s complete -- for job %s on %s/%s...", p, size, backupName, instanceName, instanceID)
 }

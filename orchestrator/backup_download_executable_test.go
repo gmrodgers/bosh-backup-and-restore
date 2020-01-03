@@ -2,7 +2,10 @@ package orchestrator_test
 
 import (
 	"fmt"
-	"github.com/cloudfoundry-incubator/bosh-backup-and-restore/executor"
+	"io"
+	"time"
+
+	"github.com/cloudfoundry-incubator/bosh-backup-and-restore/counter"
 	"github.com/cloudfoundry-incubator/bosh-backup-and-restore/orchestrator"
 	"github.com/cloudfoundry-incubator/bosh-backup-and-restore/orchestrator/fakes"
 	. "github.com/onsi/ginkgo"
@@ -11,24 +14,40 @@ import (
 
 var _ = Describe("BackupDownloadExecutable", func() {
 	var (
-		executable                executor.Executable
+		executable                orchestrator.BackupDownloadExecutable
 		localBackup               *fakes.FakeBackup
 		remoteArtifact            *fakes.FakeBackupArtifact
 		logger                    *fakes.FakeLogger
 		localBackupArtifactWriter *fakes.FakeWriteCloser
+		fakeClock                 *fakes.FakeClock
 		actualError               error
 	)
+
 	BeforeEach(func() {
+		fakeClock = new(fakes.FakeClock)
 		localBackup = new(fakes.FakeBackup)
 		remoteArtifact = new(fakes.FakeBackupArtifact)
+		remoteArtifact.SizeReturns("1K", nil)
 		logger = new(fakes.FakeLogger)
 		localBackupArtifactWriter = new(fakes.FakeWriteCloser)
 
 		localBackup.CreateArtifactReturns(localBackupArtifactWriter, nil)
+		remoteArtifact.StreamFromRemoteStub = func(w io.Writer) error {
+			w.Write([]byte(""))
+			for fakeClock.SleepCallCount() < 1 {
+			}
+			w.Write([]byte(""))
+			return nil
+		}
+
+		localBackupArtifactWriter.WriteStub = func(p []byte) (int, error) {
+			return 512, nil
+		}
 	})
 
 	JustBeforeEach(func() {
 		executable = orchestrator.NewBackupDownloadExecutable(localBackup, remoteArtifact, logger)
+		executable.Clock = fakeClock
 		actualError = executable.Execute()
 	})
 
@@ -48,7 +67,7 @@ var _ = Describe("BackupDownloadExecutable", func() {
 
 		By("streaming from the remote artifact", func() {
 			Expect(remoteArtifact.StreamFromRemoteCallCount()).To(Equal(1))
-			Expect(remoteArtifact.StreamFromRemoteArgsForCall(0)).To(Equal(localBackupArtifactWriter))
+			Expect(remoteArtifact.StreamFromRemoteArgsForCall(0)).To(BeAssignableToTypeOf(&counter.CountWriter{}))
 		})
 
 		By("closing the local backup artifact writer", func() {
@@ -64,7 +83,32 @@ var _ = Describe("BackupDownloadExecutable", func() {
 		})
 
 		By("logging the download", func() {
+			By("waiting 5s")
+			Expect(fakeClock.SleepCallCount()).To(BeNumerically(">", 0))
+			Expect(fakeClock.SleepArgsForCall(0)).To(Equal(time.Second * 5))
+
 			Expect(logger.InfoCallCount()).To(BeNumerically(">", 0))
+			By("logging 0% when starting")
+			prefix, message, args := logger.InfoArgsForCall(0)
+			Expect(prefix).To(Equal("bbr"))
+			Expect(message).To(ContainSubstring("Copying backup -- %s of %s complete -- for job %s on %s"))
+			Expect(args[0]).To(Equal("0%"))
+
+			By("logging 50% when halfway complete")
+			prefix, message, args = logger.InfoArgsForCall(1)
+			Expect(prefix).To(Equal("bbr"))
+			Expect(message).To(ContainSubstring("Copying backup -- %s of %s complete -- for job %s on %s"))
+			Expect(args[0]).To(Equal("50%"))
+
+			By("waiting 5s")
+			Expect(fakeClock.SleepCallCount()).To(Equal(2))
+			Expect(fakeClock.SleepArgsForCall(1)).To(Equal(time.Second * 5))
+
+			By("logging 100% when complete")
+			prefix, message, args = logger.InfoArgsForCall(2)
+			Expect(prefix).To(Equal("bbr"))
+			Expect(message).To(ContainSubstring("Copying backup -- %s of %s complete -- for job %s on %s"))
+			Expect(args[0]).To(Equal("100%"))
 		})
 	})
 

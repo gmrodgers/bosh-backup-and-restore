@@ -1,5 +1,7 @@
 cloud.google.com/go v0.26.0 h1:e0WKqKTd5BnrG8aKH3J3h+QvEIQtSUcf2n5UZ5ZgLtQ=
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
+code.cloudfoundry.org/bytefmt v0.0.0-20190819182555-854d396b647c h1:2RuXx1+tSNWRjxhY0Bx52kjV2odJQ0a6MTbfTPhGAkg=
+code.cloudfoundry.org/bytefmt v0.0.0-20190819182555-854d396b647c/go.mod h1:wN/zk7mhREp/oviagqUXY3EwuHhWyOvAdsn5Y4CzOrc=
 code.cloudfoundry.org/clock v0.0.0-20180518195852-02e53af36e6c h1:5eeuG0BHx1+DHeT3AP+ISKZ2ht1UjGhm581ljqYpVeQ=
 code.cloudfoundry.org/clock v0.0.0-20180518195852-02e53af36e6c/go.mod h1:QD9Lzhd/ux6eNQVUDVRJX/RKTigpewimNYBi7ivZKY8=
 code.cloudfoundry.org/workpool v0.0.0-20170718174546-99757edba735 h1:INLi/7M38Pt0bt9nRz4+go1gnpfAyoX6LbrIBiYGJzo=

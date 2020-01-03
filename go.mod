@@ -2,6 +2,7 @@ module github.com/cloudfoundry-incubator/bosh-backup-and-restore
 
 require (
 	cloud.google.com/go v0.26.0 // indirect
+	code.cloudfoundry.org/bytefmt v0.0.0-20190819182555-854d396b647c
 	code.cloudfoundry.org/clock v0.0.0-20180518195852-02e53af36e6c // indirect
 	code.cloudfoundry.org/workpool v0.0.0-20170718174546-99757edba735 // indirect
 	contrib.go.opencensus.io/exporter/stackdriver v0.6.0 // indirect
@@ -52,7 +53,7 @@ require (
 	golang.org/x/net v0.0.0-20190813141303-74dc4d7220e7 // indirect
 	golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be // indirect
 	golang.org/x/sys v0.0.0-20190826190057-c7b8b68b1456 // indirect
-	golang.org/x/text v0.3.2 // indirect
+	golang.org/x/text v0.3.2
 	google.golang.org/api v0.0.0-20180824000442-943e5aafc110 // indirect
 	google.golang.org/appengine v1.1.0 // indirect
 	google.golang.org/genproto v0.0.0-20180817151627-c66870c02cf8 // indirect
