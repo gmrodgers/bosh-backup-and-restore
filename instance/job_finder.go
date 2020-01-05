@@ -46,64 +46,77 @@ func NewJobFinderOmitMetadataReleases(bbrVersion string, logger Logger) *JobFind
 	}
 }
 
-func (j *JobFinderFromScripts) FindJobs(instanceIdentifier InstanceIdentifier, remoteRunner ssh.RemoteRunner,
-	manifestQuerier ManifestQuerier) (orchestrator.Jobs, error) {
-
-	findOutput, err := j.findBBRScripts(instanceIdentifier, remoteRunner)
+func (jf *JobFinderFromScripts) FindJobs(
+	instanceIdentifier InstanceIdentifier,
+	remoteRunner ssh.RemoteRunner,
+	manifestQuerier ManifestQuerier,
+) (orchestrator.Jobs, error) {
+	scripts, err := jf.allScripts(instanceIdentifier, remoteRunner)
 	if err != nil {
 		return nil, err
 	}
-	metadata := map[string]Metadata{}
-	scripts := NewBackupAndRestoreScripts(findOutput)
-	for _, script := range scripts {
-		if script.isMetadata() {
-			jobMetadata, err := j.findMetadata(instanceIdentifier, script, remoteRunner)
+	scriptsByJob := groupScriptsByJobName(scripts)
 
-			if err != nil {
-				return nil, err
-			}
-
-			jobName := script.JobName()
-			j.logMetadata(jobMetadata, jobName)
-
-			jobMetadata.BackupName = ""
-			metadata[jobName] = *jobMetadata
-		}
+	metadataScripts := onlyMetadataScripts(scripts)
+	metadataByJob, err := jf.groupMetadataByJobName(metadataScripts, instanceIdentifier, remoteRunner)
+	if err != nil {
+		return nil, err
 	}
 
-	return j.buildJobs(remoteRunner, instanceIdentifier, j.Logger, scripts, metadata, manifestQuerier)
-
+	return jf.buildJobs(remoteRunner, instanceIdentifier, scriptsByJob, metadataByJob, manifestQuerier)
 }
 
-func (j *JobFinderFromScripts) logMetadata(jobMetadata *Metadata, jobName string) {
+func onlyMetadataScripts(scripts BackupAndRestoreScripts) BackupAndRestoreScripts {
+	var metadataScripts BackupAndRestoreScripts
+	for _, script := range scripts {
+		if script.isMetadata() {
+			metadataScripts = append(metadataScripts, script)
+		}
+	}
+	return metadataScripts
+}
+
+func (jf *JobFinderFromScripts) groupMetadataByJobName(
+	scripts BackupAndRestoreScripts,
+	instanceIdentifier InstanceIdentifier,
+	remoteRunner ssh.RemoteRunner,
+) (map[string]Metadata, error) {
+	metadata := map[string]Metadata{}
+	for _, script := range scripts {
+		jobMetadata, err := jf.extractMetadataFromScript(instanceIdentifier, script, remoteRunner)
+		if err != nil {
+			return nil, err
+		}
+
+		jf.logMetadata(jobMetadata, script.JobName())
+
+		jobMetadata.BackupName = ""
+		metadata[script.JobName()] = *jobMetadata
+	}
+	return metadata, nil
+}
+
+func (jf *JobFinderFromScripts) logMetadata(jobMetadata *Metadata, jobName string) {
 	for _, lockBefore := range jobMetadata.BackupShouldBeLockedBefore {
-		j.Logger.Info("bbr", "Detected order: %s should be locked before %s during backup", jobName, filepath.Join(lockBefore.Release, lockBefore.JobName))
+		jf.Logger.Info("bbr", "Detected order: %s should be locked before %s during backup", jobName, filepath.Join(lockBefore.Release, lockBefore.JobName))
 	}
 	for _, lockBefore := range jobMetadata.RestoreShouldBeLockedBefore {
-		j.Logger.Info("bbr", "Detected order: %s should be locked before %s during restore", jobName, filepath.Join(lockBefore.Release, lockBefore.JobName))
+		jf.Logger.Info("bbr", "Detected order: %s should be locked before %s during restore", jobName, filepath.Join(lockBefore.Release, lockBefore.JobName))
 	}
 
 	if jobMetadata.BackupName != "" {
-		j.Logger.Warn("bbr", "discontinued metadata keys backup_name/restore_name found in job %s. bbr will not be able to restore this backup artifact.", jobName)
+		jf.Logger.Warn("bbr", "discontinued metadata keys backup_name/restore_name found in job %s. bbr will not be able to restore this backup artifact.", jobName)
 	}
 }
 
-func (j *JobFinderFromScripts) findBBRScripts(instanceIdentifierForLogging InstanceIdentifier,
-	remoteRunner ssh.RemoteRunner) ([]string, error) {
-	j.Logger.Debug("bbr", "Attempting to find scripts on %s", instanceIdentifierForLogging)
-
-	scripts, err := remoteRunner.FindFiles("/var/vcap/jobs/*/bin/bbr/*")
-	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("finding scripts failed on %s", instanceIdentifierForLogging))
-	}
-
-	return scripts, nil
-}
-
-func (j *JobFinderFromScripts) findMetadata(instanceIdentifier InstanceIdentifier, script Script, remoteRunner ssh.RemoteRunner) (*Metadata, error) {
+func (jf *JobFinderFromScripts) extractMetadataFromScript(
+	instanceIdentifier InstanceIdentifier,
+	script Script,
+	remoteRunner ssh.RemoteRunner,
+) (*Metadata, error) {
 	metadataContent, err := remoteRunner.RunScriptWithEnv(
 		string(script),
-		map[string]string{"BBR_VERSION": j.bbrVersion},
+		map[string]string{"BBR_VERSION": jf.bbrVersion},
 		fmt.Sprintf("find metadata for %s on %s", script.JobName(), instanceIdentifier),
 	)
 	if err != nil {
@@ -114,7 +127,7 @@ func (j *JobFinderFromScripts) findMetadata(instanceIdentifier InstanceIdentifie
 			instanceIdentifier,
 		)
 	}
-	jobMetadata, err := j.parseJobMetadata(metadataContent)
+	jobMetadata, err := jf.parseJobMetadata(metadataContent)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err,
@@ -127,31 +140,50 @@ func (j *JobFinderFromScripts) findMetadata(instanceIdentifier InstanceIdentifie
 	return jobMetadata, nil
 }
 
-func (j *JobFinderFromScripts) buildJobs(remoteRunner ssh.RemoteRunner,
-	instanceIdentifier InstanceIdentifier,
-	logger Logger, scripts BackupAndRestoreScripts,
-	metadata map[string]Metadata, manifestQuerier ManifestQuerier) (orchestrator.Jobs, error) {
-	groupedByJobName := map[string]BackupAndRestoreScripts{}
+func (jf *JobFinderFromScripts) allScripts(
+	instanceIdentifierForLogging InstanceIdentifier,
+	remoteRunner ssh.RemoteRunner,
+) (BackupAndRestoreScripts, error) {
+	jf.Logger.Debug("bbr", "Attempting to find scripts on %s", instanceIdentifierForLogging)
+
+	scripts, err := remoteRunner.FindFiles("/var/vcap/jobs/*/bin/bbr/*")
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("finding scripts failed on %s", instanceIdentifierForLogging))
+	}
+
+	return NewBackupAndRestoreScripts(scripts), nil
+}
+
+func groupScriptsByJobName(scripts BackupAndRestoreScripts) map[string]BackupAndRestoreScripts {
+	scriptsByJob := map[string]BackupAndRestoreScripts{}
 	for _, script := range scripts {
 		jobName := script.JobName()
-		existingScripts := groupedByJobName[jobName]
-		groupedByJobName[jobName] = append(existingScripts, script)
+		scriptsByJob[jobName] = append(scriptsByJob[jobName], script)
 	}
+	return scriptsByJob
+}
+
+func (jf *JobFinderFromScripts) buildJobs(
+	remoteRunner ssh.RemoteRunner,
+	instanceIdentifier InstanceIdentifier,
+	scriptsByJob map[string]BackupAndRestoreScripts,
+	metadataByJob map[string]Metadata,
+	manifestQuerier ManifestQuerier,
+) (orchestrator.Jobs, error) {
 	var jobs orchestrator.Jobs
-	var skippedJobs []string
-	for jobName, jobScripts := range groupedByJobName {
-		if metadata[jobName].SkipBBRScripts {
-			skippedJobs = append(skippedJobs, jobName)
+
+	for jobName, jobScripts := range scriptsByJob {
+		if metadataByJob[jobName].SkipBBRScripts {
 			continue
 		}
 
 		for _, jobScript := range jobScripts {
-			j.Logger.Info("bbr", "%s/%s/%s", instanceIdentifier, jobName, jobScript.Name())
+			jf.Logger.Info("bbr", "%s/%s/%s", instanceIdentifier, jobName, jobScript.Name())
 		}
 
 		releaseName, err := manifestQuerier.FindReleaseName(instanceIdentifier.InstanceGroupName, jobName)
 		if err != nil {
-			logger.Warn("bbr", "could not find release name for job %s", jobName)
+			jf.Logger.Warn("bbr", "could not find release name for job %s", jobName)
 			releaseName = ""
 		}
 
@@ -160,22 +192,37 @@ func (j *JobFinderFromScripts) buildJobs(remoteRunner ssh.RemoteRunner,
 		jobs = append(jobs, NewJob(
 			remoteRunner,
 			instanceIdentifier.String(),
-			logger,
+			jf.Logger,
 			releaseName,
 			jobScripts,
-			metadata[jobName],
+			metadataByJob[jobName],
 			backupOneRestoreAll,
 			instanceIdentifier.Bootstrap,
 		))
 	}
 
-	var skippedJobsMsg = "Found disabled jobs on instance"
-	if len(skippedJobs) != 0 {
-		skippedJobsMsg = fmt.Sprintf("%s %s jobs:", skippedJobsMsg, instanceIdentifier)
-		for _, job := range skippedJobs {
-			skippedJobsMsg = skippedJobsMsg + " " + job
-		}
-		j.Logger.Debug("bbr", skippedJobsMsg)
+	if len(getSkippedJobs(scriptsByJob, metadataByJob)) != 0 {
+		jf.logSkippedJobs(getSkippedJobs(scriptsByJob, metadataByJob), instanceIdentifier)
 	}
 	return jobs, nil
+}
+
+func getSkippedJobs(scriptsByJob map[string]BackupAndRestoreScripts, metadata map[string]Metadata) []string {
+	var skippedJobs []string
+	for jobName := range scriptsByJob {
+		if metadata[jobName].SkipBBRScripts {
+			skippedJobs = append(skippedJobs, jobName)
+		}
+	}
+	return skippedJobs
+}
+
+func (jf *JobFinderFromScripts) logSkippedJobs(skippedJobs []string, instanceIdentifier InstanceIdentifier) {
+	var skippedJobsMsg = "Found disabled jobs on instance"
+	skippedJobsMsg = fmt.Sprintf("%s %s jobs:", skippedJobsMsg, instanceIdentifier)
+	for _, job := range skippedJobs {
+		skippedJobsMsg = skippedJobsMsg + " " + job
+	}
+
+	jf.Logger.Debug("bbr", skippedJobsMsg)
 }
