@@ -248,7 +248,14 @@ var _ = Describe("artifact", func() {
 
 		Context("Named Artifact", func() {
 			BeforeEach(func() {
-				job = instance.NewJob(nil, "", nil, "foo1", instance.BackupAndRestoreScripts{"/var/vcap/jobs/foo1/start_ctl"}, instance.Metadata{}, true, true)
+				job = instance.NewJob(
+					instance.BackupAndRestoreScripts{"/var/vcap/jobs/foo1/start_ctl"},
+					true,
+					instance.JobContext{
+						Release:         "foo1",
+						OnBootstrapNode: true,
+					},
+				)
 			})
 
 			It("is named with the job's custom backup name", func() {
@@ -264,7 +271,11 @@ var _ = Describe("artifact", func() {
 
 		Context("Default Artifact", func() {
 			BeforeEach(func() {
-				job = instance.NewJob(nil, "", nil, "", instance.BackupAndRestoreScripts{"/var/vcap/jobs/foo1/start_ctl"}, instance.Metadata{}, false, false)
+				job = instance.NewJob(
+					instance.BackupAndRestoreScripts{"/var/vcap/jobs/foo1/start_ctl"},
+					false,
+					instance.JobContext{},
+				)
 			})
 
 			It("is named after the job", func() {
@@ -298,7 +309,13 @@ var _ = Describe("artifact", func() {
 
 		Context("Named Artifact", func() {
 			BeforeEach(func() {
-				job = instance.NewJob(nil, "", nil, "", instance.BackupAndRestoreScripts{"/var/vcap/jobs/foo1/start_ctl"}, instance.Metadata{RestoreName: "named-artifact-to-restore"}, false, false)
+				job = instance.NewJob(
+					instance.BackupAndRestoreScripts{"/var/vcap/jobs/foo1/start_ctl"},
+					false,
+					instance.JobContext{
+						Metadata: instance.Metadata{RestoreName: "named-artifact-to-restore"},
+					},
+				)
 			})
 
 			It("is named with the job's custom backup name", func() {
@@ -314,7 +331,13 @@ var _ = Describe("artifact", func() {
 
 		Context("Default Artifact", func() {
 			BeforeEach(func() {
-				job = instance.NewJob(nil, "", nil, "", instance.BackupAndRestoreScripts{"/var/vcap/jobs/foo1/start_ctl"}, instance.Metadata{}, false, false)
+				job = instance.NewJob(
+					instance.BackupAndRestoreScripts{"/var/vcap/jobs/foo1/start_ctl"},
+					false,
+					instance.JobContext{
+						Metadata: instance.Metadata{},
+					},
+				)
 			})
 
 			It("is named after the job", func() {

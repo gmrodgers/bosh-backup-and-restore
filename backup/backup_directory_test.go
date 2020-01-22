@@ -1010,7 +1010,7 @@ backup_activity:
 		})
 
 		Context("when the artifact exists", func() {
-			It("returns an the artifact size", func() {
+			XIt("returns an the artifact size", func() {
 				size, err = artifact.GetArtifactSize(fakeBackupArtifact)
 
 				Expect(err).NotTo(HaveOccurred())

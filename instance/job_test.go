@@ -45,7 +45,14 @@ var _ = Describe("Job", func() {
 	})
 
 	JustBeforeEach(func() {
-		job = instance.NewJob(remoteRunner, instanceIdentifier, logger, releaseName, jobScripts, metadata, backupOneRestoreAll, onBootstrapNode)
+		job = instance.NewJob(jobScripts, backupOneRestoreAll, instance.JobContext{
+			Logger:             logger,
+			RemoteRunner:       remoteRunner,
+			InstanceIdentifier: instanceIdentifier,
+			Release:            releaseName,
+			Metadata:           metadata,
+			OnBootstrapNode:    onBootstrapNode,
+		})
 	})
 
 	Describe("BackupArtifactDirectory", func() {
@@ -75,14 +82,17 @@ var _ = Describe("Job", func() {
 
 			JustBeforeEach(func() {
 				jobWithName = instance.NewJob(
-					remoteRunner,
-					"",
-					logger,
-					releaseName,
 					jobScripts,
-					instance.Metadata{},
 					true,
-					onBootstrapNode)
+					instance.JobContext{
+						Logger:             logger,
+						RemoteRunner:       remoteRunner,
+						InstanceIdentifier: "",
+						Release:            releaseName,
+						Metadata:           metadata,
+						OnBootstrapNode:    onBootstrapNode,
+					})
+
 			})
 
 			It("calculates the artifact directory based on the artifact name", func() {

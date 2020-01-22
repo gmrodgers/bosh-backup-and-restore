@@ -55,7 +55,11 @@ var _ = Describe("DeploymentManager", func() {
 
 		Context("success", func() {
 			BeforeEach(func() {
-				fakeJobs = orchestrator.Jobs{instance.NewJob(nil, "", nil, "", instance.BackupAndRestoreScripts{"foo"}, instance.Metadata{}, false, false)}
+				fakeJobs = orchestrator.Jobs{instance.NewJob(
+					instance.BackupAndRestoreScripts{"foo"},
+					false,
+					instance.JobContext{},
+				)}
 				remoteRunnerFactory.Returns(remoteRunner, nil)
 				fakeJobFinder.FindJobsReturns(fakeJobs, nil)
 			})

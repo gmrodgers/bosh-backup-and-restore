@@ -101,17 +101,19 @@ var _ = Describe("Director", func() {
 				remoteRunnerFactory.Returns(remoteRunner, nil)
 				expectedJobs = []orchestrator.Job{
 					instance.NewJob(
-						remoteRunner,
-						"",
-						boshLogger,
-						"",
 						instance.BackupAndRestoreScripts{
 							"/var/vcap/jobs/consul_agent/bin/bbr/backup",
 							"/var/vcap/jobs/consul_agent/bin/bbr/restore",
 						},
-						instance.Metadata{},
 						false,
-						false,
+						instance.JobContext{
+							Logger:             boshLogger,
+							RemoteRunner:       remoteRunner,
+							InstanceIdentifier: "",
+							Release:            "",
+							Metadata:           instance.Metadata{},
+							OnBootstrapNode:    false,
+						},
 					),
 				}
 
@@ -243,26 +245,30 @@ var _ = Describe("Director", func() {
 
 				instance0Jobs = []orchestrator.Job{
 					instance.NewJob(
-						remoteRunner,
-						"",
-						boshLogger,
-						"",
 						instance.BackupAndRestoreScripts{"/var/vcap/jobs/consul_agent/bin/bbr/backup"},
-						instance.Metadata{},
 						false,
-						false,
+						instance.JobContext{
+							Logger:             boshLogger,
+							RemoteRunner:       remoteRunner,
+							InstanceIdentifier: "",
+							Release:            "",
+							Metadata:           instance.Metadata{},
+							OnBootstrapNode:    false,
+						},
 					),
 				}
 				instance1Jobs = []orchestrator.Job{
 					instance.NewJob(
-						remoteRunner,
-						"",
-						boshLogger,
-						"",
 						instance.BackupAndRestoreScripts{"/var/vcap/jobs/consul_agent/bin/bbr/backup"},
-						instance.Metadata{},
 						false,
-						false,
+						instance.JobContext{
+							Logger:             boshLogger,
+							RemoteRunner:       remoteRunner,
+							InstanceIdentifier: "",
+							Release:            "",
+							Metadata:           instance.Metadata{},
+							OnBootstrapNode:    false,
+						},
 					),
 				}
 				fakeJobFinder.FindJobsStub = func(instanceIdentifier instance.InstanceIdentifier, remoteRunner ssh.RemoteRunner, manifestQuerier instance.ManifestQuerier) (orchestrator.Jobs, error) {
@@ -392,14 +398,16 @@ var _ = Describe("Director", func() {
 
 				instance0Jobs = []orchestrator.Job{
 					instance.NewJob(
-						remoteRunner,
-						"",
-						boshLogger,
-						"",
 						instance.BackupAndRestoreScripts{"/var/vcap/jobs/consul_agent/bin/bbr/backup"},
-						instance.Metadata{},
 						false,
-						false,
+						instance.JobContext{
+							Logger:             boshLogger,
+							RemoteRunner:       remoteRunner,
+							InstanceIdentifier: "",
+							Release:            "",
+							Metadata:           instance.Metadata{},
+							OnBootstrapNode:    false,
+						},
 					),
 				}
 
@@ -515,14 +523,16 @@ var _ = Describe("Director", func() {
 					if instanceIdentifier.InstanceGroupName == "job2" {
 						return []orchestrator.Job{
 							instance.NewJob(
-								remoteRunner,
-								"",
-								boshLogger,
-								"",
 								instance.BackupAndRestoreScripts{"/var/vcap/jobs/consul_agent/bin/bbr/backup"},
-								instance.Metadata{},
 								false,
-								false,
+								instance.JobContext{
+									Logger:             boshLogger,
+									RemoteRunner:       remoteRunner,
+									InstanceIdentifier: "",
+									Release:            "",
+									Metadata:           instance.Metadata{},
+									OnBootstrapNode:    false,
+								},
 							),
 						}, nil
 					}
@@ -554,14 +564,16 @@ var _ = Describe("Director", func() {
 						boshLogger,
 						[]orchestrator.Job{
 							instance.NewJob(
-								remoteRunner,
-								"",
-								boshLogger,
-								"",
 								instance.BackupAndRestoreScripts{"/var/vcap/jobs/consul_agent/bin/bbr/backup"},
-								instance.Metadata{},
 								false,
-								false,
+								instance.JobContext{
+									Logger:             boshLogger,
+									RemoteRunner:       remoteRunner,
+									InstanceIdentifier: "",
+									Release:            "",
+									Metadata:           instance.Metadata{},
+									OnBootstrapNode:    false,
+								},
 							),
 						},
 					),
@@ -575,14 +587,16 @@ var _ = Describe("Director", func() {
 						boshLogger,
 						[]orchestrator.Job{
 							instance.NewJob(
-								remoteRunner,
-								"",
-								boshLogger,
-								"",
 								instance.BackupAndRestoreScripts{"/var/vcap/jobs/consul_agent/bin/bbr/backup"},
-								instance.Metadata{},
 								false,
-								false,
+								instance.JobContext{
+									Logger:             boshLogger,
+									RemoteRunner:       remoteRunner,
+									InstanceIdentifier: "",
+									Release:            "",
+									Metadata:           instance.Metadata{},
+									OnBootstrapNode:    false,
+								},
 							),
 						},
 					),

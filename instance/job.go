@@ -9,15 +9,19 @@ import (
 	"github.com/pkg/errors"
 )
 
-func NewJob(remoteRunner ssh.RemoteRunner, instanceIdentifier string, logger Logger, release string, jobScripts BackupAndRestoreScripts, metadata Metadata, backupOneRestoreAll bool, onBootstrapNode bool) Job {
+type JobContext struct {
+	Logger             Logger
+	RemoteRunner       ssh.RemoteRunner
+	InstanceIdentifier string
+	Release            string
+	Metadata           Metadata
+	OnBootstrapNode    bool
+}
+
+func NewJob(jobScripts BackupAndRestoreScripts, backupOneRestoreAll bool, ctx JobContext) Job {
 	jobName := jobScripts[0].JobName()
 	return Job{
-		Logger:              logger,
-		remoteRunner:        remoteRunner,
-		instanceIdentifier:  instanceIdentifier,
 		name:                jobName,
-		release:             release,
-		metadata:            metadata,
 		backupScript:        jobScripts.BackupOnly().firstOrBlank(),
 		restoreScript:       jobScripts.RestoreOnly().firstOrBlank(),
 		preBackupScript:     jobScripts.PreBackupLockOnly().firstOrBlank(),
@@ -25,25 +29,20 @@ func NewJob(remoteRunner ssh.RemoteRunner, instanceIdentifier string, logger Log
 		postBackupScript:    jobScripts.PostBackupUnlockOnly().firstOrBlank(),
 		postRestoreScript:   jobScripts.SinglePostRestoreUnlockScript(),
 		backupOneRestoreAll: backupOneRestoreAll,
-		onBootstrapNode:     onBootstrapNode,
+		ctx:                 ctx,
 	}
 }
 
 type Job struct {
-	Logger              Logger
 	name                string
-	release             string
-	metadata            Metadata
 	backupScript        Script
 	preBackupScript     Script
 	postBackupScript    Script
 	preRestoreScript    Script
 	restoreScript       Script
 	postRestoreScript   Script
-	remoteRunner        ssh.RemoteRunner
-	instanceIdentifier  string
 	backupOneRestoreAll bool
-	onBootstrapNode     bool
+	ctx                 JobContext
 }
 
 func (j Job) Name() string {
@@ -51,27 +50,27 @@ func (j Job) Name() string {
 }
 
 func (j Job) Release() string {
-	return j.release
+	return j.ctx.Release
 }
 
 func (j Job) InstanceIdentifier() string {
-	return j.instanceIdentifier
+	return j.ctx.InstanceIdentifier
 }
 
 func (j Job) BackupArtifactName() string {
-	if j.backupOneRestoreAll && j.onBootstrapNode {
+	if j.backupOneRestoreAll && j.ctx.OnBootstrapNode {
 		return j.backupOneRestoreAllArtifactName()
 	}
 
-	return j.metadata.BackupName
+	return j.ctx.Metadata.BackupName
 }
 
 func (j Job) backupOneRestoreAllArtifactName() string {
-	return fmt.Sprintf("%s-%s-backup-one-restore-all", j.name, j.release)
+	return fmt.Sprintf("%s-%s-backup-one-restore-all", j.name, j.ctx.Release)
 }
 
 func (j Job) HasMetadataRestoreName() bool {
-	if j.metadata.RestoreName != "" {
+	if j.ctx.Metadata.RestoreName != "" {
 		return true
 	}
 	return false
@@ -82,7 +81,7 @@ func (j Job) RestoreArtifactName() string {
 		return j.backupOneRestoreAllArtifactName()
 	}
 
-	return j.metadata.RestoreName
+	return j.ctx.Metadata.RestoreName
 }
 
 func (j Job) BackupArtifactDirectory() string {
@@ -106,41 +105,41 @@ func (j Job) HasRestore() bool {
 }
 
 func (j Job) HasNamedBackupArtifact() bool {
-	return j.backupOneRestoreAll && j.onBootstrapNode
+	return j.backupOneRestoreAll && j.ctx.OnBootstrapNode
 }
 
 func (j Job) HasNamedRestoreArtifact() bool {
-	return j.backupOneRestoreAll || j.metadata.RestoreName != ""
+	return j.backupOneRestoreAll || j.ctx.Metadata.RestoreName != ""
 }
 
 func (j Job) Backup() error {
 	if j.backupScript != "" {
-		j.Logger.Debug("bbr", "> %s", j.backupScript)
-		j.Logger.Info("bbr", "Backing up %s on %s...", j.name, j.instanceIdentifier)
+		j.ctx.Logger.Debug("bbr", "> %s", j.backupScript)
+		j.ctx.Logger.Info("bbr", "Backing up %s on %s...", j.name, j.ctx.InstanceIdentifier)
 
-		err := j.remoteRunner.CreateDirectory(j.BackupArtifactDirectory())
+		err := j.ctx.RemoteRunner.CreateDirectory(j.BackupArtifactDirectory())
 		if err != nil {
 			return err
 		}
 
 		env := artifactDirectoryVariables(j.BackupArtifactDirectory())
-		_, err = j.remoteRunner.RunScriptWithEnv(
+		_, err = j.ctx.RemoteRunner.RunScriptWithEnv(
 			string(j.backupScript),
 			env,
-			fmt.Sprintf("backup %s on %s", j.name, j.instanceIdentifier),
+			fmt.Sprintf("backup %s on %s", j.name, j.ctx.InstanceIdentifier),
 		)
 
 		if err != nil {
-			j.Logger.Error("bbr", "Error backing up %s on %s.", j.name, j.instanceIdentifier)
+			j.ctx.Logger.Error("bbr", "Error backing up %s on %s.", j.name, j.ctx.InstanceIdentifier)
 
 			return errors.Wrap(err, fmt.Sprintf(
 				"Error attempting to run backup for job %s on %s",
 				j.Name(),
-				j.instanceIdentifier,
+				j.ctx.InstanceIdentifier,
 			))
 		}
 
-		j.Logger.Info("bbr", "Finished backing up %s on %s.", j.name, j.instanceIdentifier)
+		j.ctx.Logger.Info("bbr", "Finished backing up %s on %s.", j.name, j.ctx.InstanceIdentifier)
 	}
 
 	return nil
@@ -148,24 +147,24 @@ func (j Job) Backup() error {
 
 func (j Job) PreBackupLock() error {
 	if j.preBackupScript != "" {
-		j.Logger.Debug("bbr", "> %s", j.preBackupScript)
-		j.Logger.Info("bbr", "Locking %s on %s for backup...", j.name, j.instanceIdentifier)
+		j.ctx.Logger.Debug("bbr", "> %s", j.preBackupScript)
+		j.ctx.Logger.Info("bbr", "Locking %s on %s for backup...", j.name, j.ctx.InstanceIdentifier)
 
-		_, err := j.remoteRunner.RunScript(
+		_, err := j.ctx.RemoteRunner.RunScript(
 			string(j.preBackupScript),
-			fmt.Sprintf("pre-backup lock %s on %s", j.name, j.instanceIdentifier),
+			fmt.Sprintf("pre-backup lock %s on %s", j.name, j.ctx.InstanceIdentifier),
 		)
 		if err != nil {
-			j.Logger.Error("bbr", "Error locking %s on %s.", j.name, j.instanceIdentifier)
+			j.ctx.Logger.Error("bbr", "Error locking %s on %s.", j.name, j.ctx.InstanceIdentifier)
 
 			return errors.Wrap(err, fmt.Sprintf(
 				"Error attempting to run pre-backup-lock for job %s on %s",
 				j.Name(),
-				j.instanceIdentifier,
+				j.ctx.InstanceIdentifier,
 			))
 		}
 
-		j.Logger.Info("bbr", "Finished locking %s on %s for backup.", j.name, j.instanceIdentifier)
+		j.ctx.Logger.Info("bbr", "Finished locking %s on %s for backup.", j.name, j.ctx.InstanceIdentifier)
 	}
 
 	return nil
@@ -173,27 +172,27 @@ func (j Job) PreBackupLock() error {
 
 func (j Job) PostBackupUnlock(afterSuccessfulBackup bool) error {
 	if j.postBackupScript != "" {
-		j.Logger.Debug("bbr", "> %s", j.postBackupScript)
-		j.Logger.Info("bbr", "Unlocking %s on %s...", j.name, j.instanceIdentifier)
+		j.ctx.Logger.Debug("bbr", "> %s", j.postBackupScript)
+		j.ctx.Logger.Info("bbr", "Unlocking %s on %s...", j.name, j.ctx.InstanceIdentifier)
 		env := map[string]string{
 			"BBR_AFTER_BACKUP_SCRIPTS_SUCCESSFUL": strconv.FormatBool(afterSuccessfulBackup),
 		}
-		_, err := j.remoteRunner.RunScriptWithEnv(
+		_, err := j.ctx.RemoteRunner.RunScriptWithEnv(
 			string(j.postBackupScript),
 			env,
-			fmt.Sprintf("post-backup unlock %s on %s", j.name, j.instanceIdentifier),
+			fmt.Sprintf("post-backup unlock %s on %s", j.name, j.ctx.InstanceIdentifier),
 		)
 		if err != nil {
-			j.Logger.Error("bbr", "Error unlocking %s on %s.", j.name, j.instanceIdentifier)
+			j.ctx.Logger.Error("bbr", "Error unlocking %s on %s.", j.name, j.ctx.InstanceIdentifier)
 
 			return errors.Wrap(err, fmt.Sprintf(
 				"Error attempting to run post-backup-unlock for job %s on %s",
 				j.Name(),
-				j.instanceIdentifier,
+				j.ctx.InstanceIdentifier,
 			))
 		}
 
-		j.Logger.Info("bbr", "Finished unlocking %s on %s.", j.name, j.instanceIdentifier)
+		j.ctx.Logger.Info("bbr", "Finished unlocking %s on %s.", j.name, j.ctx.InstanceIdentifier)
 	}
 
 	return nil
@@ -201,24 +200,24 @@ func (j Job) PostBackupUnlock(afterSuccessfulBackup bool) error {
 
 func (j Job) PreRestoreLock() error {
 	if j.preRestoreScript != "" {
-		j.Logger.Debug("bbr", "> %s", j.preRestoreScript)
-		j.Logger.Info("bbr", "Locking %s on %s for restore...", j.name, j.instanceIdentifier)
+		j.ctx.Logger.Debug("bbr", "> %s", j.preRestoreScript)
+		j.ctx.Logger.Info("bbr", "Locking %s on %s for restore...", j.name, j.ctx.InstanceIdentifier)
 
-		_, err := j.remoteRunner.RunScript(
+		_, err := j.ctx.RemoteRunner.RunScript(
 			string(j.preRestoreScript),
-			fmt.Sprintf("pre-restore lock %s on %s", j.name, j.instanceIdentifier),
+			fmt.Sprintf("pre-restore lock %s on %s", j.name, j.ctx.InstanceIdentifier),
 		)
 		if err != nil {
-			j.Logger.Error("bbr", "Error locking %s on %s.", j.name, j.instanceIdentifier)
+			j.ctx.Logger.Error("bbr", "Error locking %s on %s.", j.name, j.ctx.InstanceIdentifier)
 
 			return errors.Wrap(err, fmt.Sprintf(
 				"Error attempting to run pre-restore-lock for job %s on %s",
 				j.Name(),
-				j.instanceIdentifier,
+				j.ctx.InstanceIdentifier,
 			))
 		}
 
-		j.Logger.Info("bbr", "Finished locking %s on %s for restore.", j.name, j.instanceIdentifier)
+		j.ctx.Logger.Info("bbr", "Finished locking %s on %s for restore.", j.name, j.ctx.InstanceIdentifier)
 	}
 
 	return nil
@@ -226,25 +225,24 @@ func (j Job) PreRestoreLock() error {
 
 func (j Job) Restore() error {
 	if j.restoreScript != "" {
-		j.Logger.Debug("bbr", "> %s", j.restoreScript)
-		j.Logger.Info("bbr", "Restoring %s on %s...", j.name, j.instanceIdentifier)
+		j.ctx.Logger.Debug("bbr", "> %s", j.restoreScript)
+		j.ctx.Logger.Info("bbr", "Restoring %s on %s...", j.name, j.ctx.InstanceIdentifier)
 
 		env := artifactDirectoryVariables(j.RestoreArtifactDirectory())
-		_, err := j.remoteRunner.RunScriptWithEnv(
+		_, err := j.ctx.RemoteRunner.RunScriptWithEnv(
 			string(j.restoreScript), env,
-			fmt.Sprintf("restore %s on %s", j.name, j.instanceIdentifier),
+			fmt.Sprintf("restore %s on %s", j.name, j.ctx.InstanceIdentifier),
 		)
 		if err != nil {
-			j.Logger.Error("bbr", "Error restoring %s on %s.", j.name, j.instanceIdentifier)
-
+			j.ctx.Logger.Error("bbr", "Error restoring %s on %s.", j.name, j.ctx.InstanceIdentifier)
 			return errors.Wrap(err, fmt.Sprintf(
 				"Error attempting to run restore for job %s on %s",
 				j.Name(),
-				j.instanceIdentifier,
+				j.ctx.InstanceIdentifier,
 			))
 		}
 
-		j.Logger.Info("bbr", "Finished restoring %s on %s.", j.name, j.instanceIdentifier)
+		j.ctx.Logger.Info("bbr", "Finished restoring %s on %s.", j.name, j.ctx.InstanceIdentifier)
 	}
 
 	return nil
@@ -252,24 +250,24 @@ func (j Job) Restore() error {
 
 func (j Job) PostRestoreUnlock() error {
 	if j.postRestoreScript != "" {
-		j.Logger.Debug("bbr", "> %s", j.postRestoreScript)
-		j.Logger.Info("bbr", "Unlocking %s on %s...", j.name, j.instanceIdentifier)
+		j.ctx.Logger.Debug("bbr", "> %s", j.postRestoreScript)
+		j.ctx.Logger.Info("bbr", "Unlocking %s on %s...", j.name, j.ctx.InstanceIdentifier)
 
-		_, err := j.remoteRunner.RunScript(
+		_, err := j.ctx.RemoteRunner.RunScript(
 			string(j.postRestoreScript),
-			fmt.Sprintf("post-restore unlock %s on %s", j.name, j.instanceIdentifier),
+			fmt.Sprintf("post-restore unlock %s on %s", j.name, j.ctx.InstanceIdentifier),
 		)
 		if err != nil {
-			j.Logger.Error("bbr", "Error unlocking %s on %s.", j.name, j.instanceIdentifier)
+			j.ctx.Logger.Error("bbr", "Error unlocking %s on %s.", j.name, j.ctx.InstanceIdentifier)
 
 			return errors.Wrap(err, fmt.Sprintf(
 				"Error attempting to run post-restore-unlock for job %s on %s",
 				j.Name(),
-				j.instanceIdentifier,
+				j.ctx.InstanceIdentifier,
 			))
 		}
 
-		j.Logger.Info("bbr", "Finished unlocking %s on %s.", j.name, j.instanceIdentifier)
+		j.ctx.Logger.Info("bbr", "Finished unlocking %s on %s.", j.name, j.ctx.InstanceIdentifier)
 	}
 
 	return nil
@@ -295,11 +293,11 @@ func (j Job) handleErrs(jobName, label string, err error, exitCode int, stdout, 
 	var foundErrors []error
 
 	if err != nil {
-		j.Logger.Error("bbr", fmt.Sprintf(
+		j.ctx.Logger.Error("bbr", fmt.Sprintf(
 			"Error attempting to run %s script for job %s on %s. Error: %s",
 			label,
 			jobName,
-			j.instanceIdentifier,
+			j.ctx.InstanceIdentifier,
 			err.Error(),
 		))
 		foundErrors = append(foundErrors, err)
@@ -308,14 +306,14 @@ func (j Job) handleErrs(jobName, label string, err error, exitCode int, stdout, 
 			"%s script for job %s failed on %s.\nStdout: %s\nStderr: %s",
 			label,
 			jobName,
-			j.instanceIdentifier,
+			j.ctx.InstanceIdentifier,
 			stdout,
 			stderr,
 		)
 
 		foundErrors = append(foundErrors, errors.New(errorString))
 
-		j.Logger.Error("bbr", errorString)
+		j.ctx.Logger.Error("bbr", errorString)
 	}
 
 	return orchestrator.ConvertErrors(foundErrors)
@@ -324,7 +322,7 @@ func (j Job) handleErrs(jobName, label string, err error, exitCode int, stdout, 
 func (j Job) BackupShouldBeLockedBefore() []orchestrator.JobSpecifier {
 	jobSpecifiers := []orchestrator.JobSpecifier{}
 
-	for _, lockBefore := range j.metadata.BackupShouldBeLockedBefore {
+	for _, lockBefore := range j.ctx.Metadata.BackupShouldBeLockedBefore {
 		jobSpecifiers = append(jobSpecifiers, orchestrator.JobSpecifier{
 			Name: lockBefore.JobName, Release: lockBefore.Release,
 		})
@@ -336,7 +334,7 @@ func (j Job) BackupShouldBeLockedBefore() []orchestrator.JobSpecifier {
 func (j Job) RestoreShouldBeLockedBefore() []orchestrator.JobSpecifier {
 	jobSpecifiers := []orchestrator.JobSpecifier{}
 
-	for _, lockBefore := range j.metadata.RestoreShouldBeLockedBefore {
+	for _, lockBefore := range j.ctx.Metadata.RestoreShouldBeLockedBefore {
 		jobSpecifiers = append(jobSpecifiers, orchestrator.JobSpecifier{
 			Name: lockBefore.JobName, Release: lockBefore.Release,
 		})

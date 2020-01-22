@@ -190,14 +190,16 @@ func (jf *JobFinderFromScripts) buildJobs(
 		backupOneRestoreAll, _ := manifestQuerier.IsJobBackupOneRestoreAll(instanceIdentifier.InstanceGroupName, jobName)
 
 		jobs = append(jobs, NewJob(
-			remoteRunner,
-			instanceIdentifier.String(),
-			jf.Logger,
-			releaseName,
 			jobScripts,
-			metadataByJob[jobName],
 			backupOneRestoreAll,
-			instanceIdentifier.Bootstrap,
+			JobContext{
+				Logger:             jf.Logger,
+				RemoteRunner:       remoteRunner,
+				InstanceIdentifier: instanceIdentifier.String(),
+				Release:            releaseName,
+				Metadata:           metadataByJob[jobName],
+				OnBootstrapNode:    instanceIdentifier.Bootstrap,
+			},
 		))
 	}
 

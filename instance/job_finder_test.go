@@ -103,10 +103,6 @@ var _ = Describe("JobFinderFromScripts", func() {
 			By("returning the list of jobs", func() {
 				Expect(jobs).To(ConsistOf(
 					NewJob(
-						remoteRunner,
-						"identifier/0",
-						logger,
-						consulAgentReleaseName,
 						BackupAndRestoreScripts{
 							"/var/vcap/jobs/consul_agent/bin/bbr/backup",
 							"/var/vcap/jobs/consul_agent/bin/bbr/restore",
@@ -115,9 +111,15 @@ var _ = Describe("JobFinderFromScripts", func() {
 							"/var/vcap/jobs/consul_agent/bin/bbr/pre-backup-lock",
 							"/var/vcap/jobs/consul_agent/bin/bbr/pre-restore-lock",
 						},
-						Metadata{},
 						true,
-						true,
+						JobContext{
+							Logger:             logger,
+							RemoteRunner:       remoteRunner,
+							InstanceIdentifier: "identifier/0",
+							Release:            consulAgentReleaseName,
+							Metadata:           Metadata{},
+							OnBootstrapNode:    true,
+						},
 					)))
 			})
 		})
@@ -131,10 +133,6 @@ var _ = Describe("JobFinderFromScripts", func() {
 				jobs, _ = jobFinder.FindJobs(instanceIdentifier, remoteRunner, manifestQuerier)
 				Expect(jobs).To(ConsistOf(
 					NewJob(
-						remoteRunner,
-						"identifier/0",
-						logger,
-						consulAgentReleaseName,
 						BackupAndRestoreScripts{
 							"/var/vcap/jobs/consul_agent/bin/bbr/backup",
 							"/var/vcap/jobs/consul_agent/bin/bbr/restore",
@@ -143,9 +141,15 @@ var _ = Describe("JobFinderFromScripts", func() {
 							"/var/vcap/jobs/consul_agent/bin/bbr/pre-backup-lock",
 							"/var/vcap/jobs/consul_agent/bin/bbr/pre-restore-lock",
 						},
-						Metadata{},
 						true,
-						false,
+						JobContext{
+							Logger:             logger,
+							RemoteRunner:       remoteRunner,
+							InstanceIdentifier: "identifier/0",
+							Release:            consulAgentReleaseName,
+							Metadata:           Metadata{},
+							OnBootstrapNode:    false,
+						},
 					)))
 			})
 		})
@@ -230,10 +234,6 @@ var _ = Describe("JobFinderFromScripts", func() {
 				By("setting the backupOneRestoreAll to false")
 				Expect(jobs).To(ConsistOf(
 					NewJob(
-						remoteRunner,
-						"identifier/0",
-						logger,
-						consulAgentReleaseName,
 						BackupAndRestoreScripts{
 							"/var/vcap/jobs/consul_agent/bin/bbr/backup",
 							"/var/vcap/jobs/consul_agent/bin/bbr/restore",
@@ -242,9 +242,17 @@ var _ = Describe("JobFinderFromScripts", func() {
 							"/var/vcap/jobs/consul_agent/bin/bbr/pre-backup-lock",
 							"/var/vcap/jobs/consul_agent/bin/bbr/pre-restore-lock",
 						},
-						Metadata{},
 						false,
-						true)))
+						JobContext{
+							Logger:             logger,
+							RemoteRunner:       remoteRunner,
+							InstanceIdentifier: "identifier/0",
+							Release:            consulAgentReleaseName,
+							Metadata:           Metadata{},
+							OnBootstrapNode:    true,
+						},
+					),
+				))
 			})
 		})
 
@@ -270,21 +278,24 @@ backup_should_be_locked_before:
 					By("adding the metadata to the returned jobs", func() {
 						Expect(jobs).To(ConsistOf(
 							NewJob(
-								remoteRunner,
-								"identifier/0",
-								logger,
-								consulAgentReleaseName,
 								BackupAndRestoreScripts{
 									"/var/vcap/jobs/consul_agent/bin/bbr/metadata",
 								},
-								Metadata{
-									BackupName:  "", // should be blank
-									RestoreName: "consul_backup",
-									BackupShouldBeLockedBefore: []LockBefore{{JobName: "bosh",
-										Release: "bosh"}},
-								},
 								true,
-								true),
+								JobContext{
+									Logger:             logger,
+									RemoteRunner:       remoteRunner,
+									InstanceIdentifier: "identifier/0",
+									Release:            consulAgentReleaseName,
+									Metadata: Metadata{
+										BackupName:  "", // should be blank
+										RestoreName: "consul_backup",
+										BackupShouldBeLockedBefore: []LockBefore{{JobName: "bosh",
+											Release: "bosh"}},
+									},
+									OnBootstrapNode: true,
+								},
+							),
 						))
 					})
 
@@ -308,21 +319,25 @@ backup_should_be_locked_before:
 						By("adding the metadata to the returned jobs with empty releases", func() {
 							Expect(jobs).To(ConsistOf(
 								NewJob(
-									remoteRunner,
-									"identifier/0",
-									logger,
-									consulAgentReleaseName,
 									BackupAndRestoreScripts{
 										"/var/vcap/jobs/consul_agent/bin/bbr/metadata",
 									},
-									Metadata{
-										BackupName:  "", // should be blank
-										RestoreName: "consul_backup",
-										BackupShouldBeLockedBefore: []LockBefore{{JobName: "bosh",
-											Release: ""}},
-									},
 									true,
-									true),
+									JobContext{
+										Logger:             logger,
+										RemoteRunner:       remoteRunner,
+										InstanceIdentifier: "identifier/0",
+										Release:            consulAgentReleaseName,
+										Metadata: Metadata{
+											BackupName:  "", // should be blank
+											RestoreName: "consul_backup",
+											BackupShouldBeLockedBefore: []LockBefore{
+												{JobName: "bosh", Release: ""},
+											},
+										},
+										OnBootstrapNode: true,
+									},
+								),
 							))
 						})
 
