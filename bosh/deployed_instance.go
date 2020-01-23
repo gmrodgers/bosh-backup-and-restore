@@ -13,7 +13,8 @@ type BoshDeployedInstance struct {
 	*instance.DeployedInstance
 }
 
-func NewBoshDeployedInstance(instanceGroupName,
+func NewBoshDeployedInstance(
+	instanceGroupName,
 	instanceIndex,
 	instanceID string,
 	remoteRunner ssh.RemoteRunner,
@@ -23,8 +24,16 @@ func NewBoshDeployedInstance(instanceGroupName,
 	jobs orchestrator.Jobs,
 ) orchestrator.Instance {
 	return &BoshDeployedInstance{
-		Deployment:       deployment,
-		DeployedInstance: instance.NewDeployedInstance(instanceIndex, instanceGroupName, instanceID, artifactDirectoryCreated, remoteRunner, logger, jobs),
+		Deployment: deployment,
+		DeployedInstance: instance.NewDeployedInstance(
+			instanceIndex,
+			instanceGroupName,
+			instanceID,
+			artifactDirectoryCreated,
+			remoteRunner,
+			logger,
+			jobs,
+		),
 	}
 }
 
